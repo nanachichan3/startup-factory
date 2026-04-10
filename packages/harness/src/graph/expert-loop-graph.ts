@@ -5,15 +5,26 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Initialize OpenRouter LLM
-const openRouterClient = new ChatOpenAI({
-  openAIApiKey: process.env.OPENROUTER_API_KEY,
-  configuration: {
-    baseURL: 'https://openrouter.ai/api/v1',
-  },
-  modelName: process.env.OPENROUTER_MODEL || 'google/gemini-2.0-flash-001',
-  temperature: 0.7,
-});
+// Lazy initialize OpenRouter LLM - only create when first needed
+let openRouterClient: ChatOpenAI | null = null;
+
+function getOpenRouterClient(): ChatOpenAI {
+  if (!openRouterClient) {
+    const apiKey = process.env.OPENROUTER_API_KEY;
+    if (!apiKey) {
+      throw new Error('OPENROUTER_API_KEY environment variable is not set');
+    }
+    openRouterClient = new ChatOpenAI({
+      openAIApiKey: apiKey,
+      configuration: {
+        baseURL: 'https://openrouter.ai/api/v1',
+      },
+      modelName: process.env.OPENROUTER_MODEL || 'google/gemini-2.0-flash-001',
+      temperature: 0.7,
+    });
+  }
+  return openRouterClient;
+}
 
 // --- State Interface ---
 export interface ExpertLoopState {
@@ -73,7 +84,7 @@ Startup brief: ${state.currentTask}
 Respond with a structured analysis.`;
 
   try {
-    const response = await openRouterClient.invoke([
+    const response = await getOpenRouterClient().invoke([
       new SystemMessage(prompt),
       new HumanMessage(state.currentTask),
     ]);
@@ -113,7 +124,7 @@ Current Stage: ${state.stage}
 Respond with either "cto" or "cmo" based on which expertise is most critical right now.`;
 
   try {
-    const response = await openRouterClient.invoke([
+    const response = await getOpenRouterClient().invoke([
       new SystemMessage(prompt),
     ]);
 
@@ -179,7 +190,7 @@ Be specific and actionable.`;
   const prompt = target === 'cmo' ? cmoPrompt : ctoPrompt;
 
   try {
-    const response = await openRouterClient.invoke([
+    const response = await getOpenRouterClient().invoke([
       new SystemMessage(prompt),
       new HumanMessage(state.currentTask),
     ]);
@@ -232,7 +243,7 @@ ${content.substring(0, 500)}
 Respond with YES if the output is valid and useful, or NO if it needs improvement.`;
 
   try {
-    const response = await openRouterClient.invoke([
+    const response = await getOpenRouterClient().invoke([
       new SystemMessage(prompt),
     ]);
 
