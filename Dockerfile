@@ -9,8 +9,9 @@ COPY packages/harness/package*.json packages/harness/tsconfig.json ./
 # Install dependencies (use install since lockfile is at root, not in harness)
 RUN npm install
 
-# Copy source
+# Copy source and prisma schema
 COPY packages/harness/src ./src
+COPY packages/harness/prisma ./prisma
 
 # Build TypeScript
 RUN npm run build
