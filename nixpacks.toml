@@ -1,0 +1,11 @@
+[phases.setup]
+nix_channel = "stable-23_11"
+
+[phases.install]
+cmds = ["npm install -g npm@latest", "npm install"]
+
+[phases.build]
+cmds = ["npm run build"]
+
+[start]
+cmd = "node packages/harness/dist/index.js"
