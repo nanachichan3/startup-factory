@@ -1,39 +1,43 @@
-import { Context } from '@temporalio/activity';
+import '@temporalio/workflow';
 
+// Re-export activity interfaces
 export interface FactoryActivities {
   createProject(name: string, description: string): Promise<string>;
   updateLifecycleStage(projectId: string, stage: string): Promise<void>;
-  runExpertLoop(content: string, context: Record<string, any>): Promise<string>;
+  runExpertLoop(founderBrief: string, context: { projectId: string; stage: string }): Promise<string>;
   persistArtifact(projectId: string, artifact: any): Promise<void>;
-  sendA2AMessage(recipient: string, message: any): Promise<void>;
+  sendA2AMessage(recipient: string, payload: any): Promise<void>;
 }
 
-export const factoryActivities: FactoryActivities = {
+// Activity implementations - these run on the worker
+export const factoryActivities = {
   async createProject(name: string, description: string): Promise<string> {
-    console.log(`[Activity] Creating project: ${name}`);
-    // In production, this would write to PostgreSQL
-    const projectId = `proj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    console.log('[Activity] Creating project:', name);
+    // In real implementation, this would write to Prisma
+    const projectId = `proj_${Date.now()}_${name.toLowerCase().replace(/\s+/g, '_')}`;
     return projectId;
   },
 
   async updateLifecycleStage(projectId: string, stage: string): Promise<void> {
-    console.log(`[Activity] Updating project ${projectId} to stage: ${stage}`);
-    // In production, this would update PostgreSQL
+    console.log(`[Activity] Updating project ${projectId} to stage:`, stage);
+    // In real implementation, this would update Prisma
   },
 
-  async runExpertLoop(content: string, context: Record<string, any>): Promise<string> {
-    console.log(`[Activity] Running expert loop for context: ${JSON.stringify(context)}`);
-    // This will be handled by the Langgraph expert loop
-    return `[Refined] ${content}`;
+  async runExpertLoop(founderBrief: string, context: { projectId: string; stage: string }): Promise<string> {
+    console.log(`[Activity] Running expert loop for project ${context.projectId}`);
+    // Import and run the expert loop
+    const { runExpertLoopGraph } = await import('../graph/expert-loop-graph.js');
+    const result = await runExpertLoopGraph(founderBrief, 3, context.projectId, context.stage);
+    return result;
   },
 
   async persistArtifact(projectId: string, artifact: any): Promise<void> {
     console.log(`[Activity] Persisting artifact for project ${projectId}`);
-    // In production, this would write to PostgreSQL
+    // In real implementation, this would write to Prisma artifacts table
   },
 
-  async sendA2AMessage(recipient: string, message: any): Promise<void> {
-    console.log(`[Activity] Sending A2A message to ${recipient}:`, message);
-    // This would use the A2A protocol handler
+  async sendA2AMessage(recipient: string, payload: any): Promise<void> {
+    console.log(`[Activity] Sending A2A message to ${recipient}:`, payload);
+    // In real implementation, this would use the A2A message bus
   },
 };

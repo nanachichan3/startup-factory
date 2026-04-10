@@ -1,0 +1,151 @@
+// Prisma Schema for Startup Factory
+// This defines the data model for startups, lifecycle stages, artifacts, and agents
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Startup model - represents a startup idea/project
+model Startup {
+  id                  String    @id @default(cuid())
+  name                String
+  description         String
+  founderBrief        String    @default("")
+  stage               String    @default("idea") // idea, gtm, mvp, launch, growth, scale
+  currentWorkflowId   String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  lastExecutedAt      DateTime?
+
+  // Relations
+  artifacts          Artifact[]
+  lifecycleEvents    LifecycleEvent[]
+  agentAssignments   AgentAssignment[]
+
+  @@map("startups")
+}
+
+// Artifact model - documents and outputs from the expert loop
+model Artifact {
+  id          String    @id @default(cuid())
+  startupId   String
+  type        String    // tech_architecture, gtm_strategy, mvp_spec, content_plan, etc.
+  title       String
+  content     String    @db.Text
+  agentRole   String?   // cto, cmo, etc.
+  iteration   Int       @default(1)
+  metadata    Json?     // Additional metadata
+  createdAt   DateTime  @default(now())
+
+  // Relations
+  startup     Startup   @relation(fields: [startupId], references: [id], onDelete: Cascade)
+
+  @@map("artifacts")
+}
+
+// LifecycleEvent model - tracks stage transitions and key events
+model LifecycleEvent {
+  id          String    @id @default(cuid())
+  startupId   String
+  fromStage   String?
+  toStage     String
+  eventType   String    // stage_advance, workflow_start, workflow_complete, artifact_created
+  metadata    Json?     // Event-specific data
+  createdAt   DateTime  @default(now())
+
+  // Relations
+  startup     Startup   @relation(fields: [startupId], references: [id], onDelete: Cascade)
+
+  @@map("lifecycle_events")
+}
+
+// Agent model - represents factory agents (CEO, CTO, CMO)
+model Agent {
+  id          String    @id @default(cuid())
+  name        String    @unique // ceo, cto, cmo
+  displayName String
+  role        String    // coordinator, technologist, marketer
+  systemPrompt String   @db.Text
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  assignments AgentAssignment[]
+  sentMessages AgentMessage[] @relation("SentMessages")
+  receivedMessages AgentMessage[] @relation("ReceivedMessages")
+
+  @@map("agents")
+}
+
+// AgentAssignment model - tracks which agent is handling which startup/stage
+model AgentAssignment {
+  id          String    @id @default(cuid())
+  agentId     String
+  startupId   String
+  stage       String    // The stage this agent is assigned to work on
+  status      String    @default("pending") // pending, in_progress, completed
+  notes       String?   @db.Text
+  assignedAt  DateTime  @default(now())
+  completedAt DateTime?
+
+  // Relations
+  agent       Agent     @relation(fields: [agentId], references: [id])
+  startup     Startup   @relation(fields: [startupId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, startupId, stage])
+  @@map("agent_assignments")
+}
+
+// AgentMessage model - A2A messages between agents
+model AgentMessage {
+  id          String    @id @default(cuid())
+  senderId    String
+  recipientId String
+  type        String    // REQUEST, RESPONSE, UPDATE, ERROR
+  payload     Json
+  workflowId  String?
+  runId       String?
+  createdAt   DateTime  @default(now())
+
+  // Relations
+  sender      Agent     @relation("SentMessages", fields: [senderId], references: [id])
+  recipient   Agent     @relation("ReceivedMessages", fields: [recipientId], references: [id])
+
+  @@map("agent_messages")
+}
+
+// WorkflowRun model - tracks Temporal workflow executions
+model WorkflowRun {
+  id            String    @id @default(cuid())
+  workflowId    String    @unique // Temporal workflow ID
+  startupId     String
+  type          String    // factory, expert_loop, advance_stage
+  status        String    // running, completed, failed, cancelled
+  input         Json?
+  output        Json?
+  error         String?   @db.Text
+  startedAt     DateTime  @default(now())
+  completedAt   DateTime?
+
+  @@map("workflow_runs")
+}
+
+// Document model - general purpose document storage
+model Document {
+  id          String    @id @default(cuid())
+  startupId   String
+  title       String
+  type        String    // brief, spec, plan, report, etc.
+  content     String    @db.Text
+  metadata    Json?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("documents")
+}

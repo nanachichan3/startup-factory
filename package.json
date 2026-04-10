@@ -10,6 +10,8 @@
     "build": "npm run build --workspaces",
     "dev": "npm run dev --workspace=@startup-factory/harness",
     "start": "npm run start --workspace=@startup-factory/harness",
+    "prisma:generate": "npm run prisma:generate --workspace=@startup-factory/harness",
+    "prisma:push": "npm run prisma:push --workspace=@startup-factory/harness",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f"
@@ -30,6 +32,10 @@
   "author": "Yev Rachkovan",
   "devDependencies": {
     "ts-node": "^10.9.2",
-    "typescript": "^6.0.2"
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "@types/express": "^5.0.6",
+    "express": "^5.2.1"
   }
 }

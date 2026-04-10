@@ -1,5 +1,5 @@
 import { proxyActivities } from '@temporalio/workflow';
-import type { FactoryActivities } from './activities';
+import type { FactoryActivities } from './activities.js';
 
 const { 
   createProject, 
@@ -65,7 +65,6 @@ export async function runExpertLoopWorkflow(input: ExpertLoopWorkflowInput): Pro
     const loopOutput = await runExpertLoop(processedContent, {
       projectId,
       stage: input.stage || 'Ideation',
-      iteration: i,
     });
 
     // Persist the artifact from this iteration

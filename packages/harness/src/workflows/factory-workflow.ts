@@ -1,5 +1,5 @@
 import { proxyActivities } from '@temporalio/workflow';
-import type { FactoryActivities } from './activities';
+import type { FactoryActivities } from './activities.js';
 
 const { createProject, updateLifecycleStage, runExpertLoop, persistArtifact, sendA2AMessage } =
   proxyActivities<FactoryActivities>({

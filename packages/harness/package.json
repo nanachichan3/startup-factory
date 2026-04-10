@@ -1,24 +1,32 @@
 {
   "name": "@startup-factory/harness",
   "version": "0.1.0",
-  "description": "Startup Factory Agent Harness",
+  "description": "Startup Factory Agent Harness - orchestrates Temporal, Langgraph, and A2A protocol",
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && npm run prisma:generate",
+    "dev": "ts-node --esm src/index.ts",
     "start": "node dist/index.js",
-    "dev": "ts-node src/index.ts"
+    "prisma:generate": "prisma generate --schema=./prisma/schema.prisma",
+    "prisma:migrate": "prisma migrate dev --schema=./prisma/schema.prisma",
+    "prisma:push": "prisma db push --schema=./prisma/schema.prisma"
   },
   "dependencies": {
     "@langchain/langgraph": "^0.0.15",
     "@langchain/openai": "^0.0.28",
+    "@prisma/client": "^5.22.0",
     "@temporalio/client": "^1.8.0",
     "@temporalio/worker": "^1.8.0",
     "dotenv": "^16.4.0",
+    "express": "^4.21.0",
     "zod": "^3.23.0"
   },
   "devDependencies": {
+    "@types/express": "^5.0.0",
     "@types/node": "^20.19.39",
+    "prisma": "^5.22.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   }

@@ -1,2 +1,1 @@
-export { ExpertLoopGraph, expertLoopGraph, runExpertLoopGraph } from './expert-loop-graph';
-export type { ExpertLoopState } from './expert-loop-graph';
+export { runExpertLoopGraph, runExpertLoopGraphSimple } from './expert-loop-graph.js';
