@@ -1,35 +1,139 @@
 # Startup Factory
 
-The Startup Factory is a systematized engine for taking an idea from inception to exit using a rigorous, AI-driven framework.
+**AI-driven startup creation engine** — a systematized framework for taking ideas from inception to exit using Temporal workflows, Langgraph-powered expert loops, and A2A agent communication.
 
-## 🚀 8-Stage Startup Lifecycle
+## 🚀 Launch Criteria
 
-The factory operates on a predefined lifecycle to ensure no step is skipped and every assumption is validated:
+This repository contains all components needed for the Startup Factory launch:
 
-1. **Ideation**: Problem identification and hypothesis generation.
-2. **Validation**: Market research, customer interviews, and demand verification.
-3. **Prototype**: Low-fidelity build to test core mechanics.
-4. **MVP (Minimum Viable Product)**: High-fidelity build to solve the primary pain point.
-5. **Growth**: Acquisition channels, viral loops, and user retention.
-6. **Scale**: Infrastructure hardening, team expansion, and market penetration.
-7. **Optimize**: Unit economics, LTV/CAC optimization, and efficiency.
-8. **Exit**: Preparation for acquisition, IPO, or sustainable dividends.
+- ✅ **Temporal.io Integration** — Workflow orchestration with PostgreSQL persistence
+- ✅ **Langgraph Integration** — Universal Expert Loop as a state graph
+- ✅ **A2A Protocol** — Agent-to-agent messaging handler
+- ✅ **Docker Ready** — Full docker-compose with Temporal, PostgreSQL, Redis
+- ✅ **Deployment Ready** — Coolify-compatible configuration
 
-## 🔄 Universal Expert Loop (UEL)
+## 🏗 Architecture
 
-The UEL is a recursive refinement system that cycles an output through specialized AI personas to eliminate blind spots:
-
-`Draft` $\rightarrow$ `Specialist A (Critic)` $\rightarrow$ `Specialist B (Optimizer)` $\rightarrow$ `Specialist C (Validator)` $\rightarrow$ `Final Output`
-
-## 🛠 Technical Stack
-
-- **Language**: TypeScript
-- **Infrastructure**: Infrastructure as Code (IaaC)
-- **License**: MIT
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Startup Factory                          │
+├─────────────────────────────────────────────────────────────┤
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │     CEO      │  │     CTO      │  │     CMO      │      │
+│  │  (Nanachi)   │  │   (You)      │  │  (Marketing) │      │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘      │
+│         │                 │                 │               │
+│         └─────────────────┼─────────────────┘               │
+│                           │                                 │
+│              ┌────────────▼────────────┐                    │
+│              │     A2A Protocol        │                    │
+│              │   (Message Handler)    │                    │
+│              └────────────┬────────────┘                    │
+│                           │                                 │
+│    ┌──────────────────────┼──────────────────────┐         │
+│    │                      │                      │         │
+│    ▼                      ▼                      ▼         │
+│ ┌────────┐          ┌────────────┐          ┌────────┐     │
+│ │Temporal│◄────────▶│  Langgraph │◄────────►│ PostgreSQL│   │
+│ │Workflow│          │ Expert Loop│         │   DB    │     │
+│ └────────┘          └────────────┘          └────────┘     │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ## 📂 Project Structure
 
-- `/src/lifecycle`: Logic and schemas for the 8-stage process.
-- `/src/uel`: Implementation of the Universal Expert Loop.
-- `/infra`: IaaC definitions.
-- `/docs`: Comprehensive architectural guidelines.
+```
+startup-factory/
+├── packages/
+│   └── harness/              # Agent execution harness
+│       └── src/
+│           ├── workflows/   # Temporal workflows & activities
+│           ├── graph/       # Langgraph expert loop
+│           ├── protocol/    # A2A message handler
+│           └── llm/        # LLM client configuration
+├── src/
+│   ├── lifecycle/          # 8-stage startup lifecycle schema
+│   └── uel/                # Universal Expert Loop core
+├── infra/                   # Infrastructure definitions
+├── docker-compose.yml       # Full stack deployment
+└── README.md
+```
+
+## 🔄 Universal Expert Loop (UEL)
+
+The UEL cycles output through specialized AI personas using Langgraph:
+
+```
+[User Input] → Listen → Decide → Delegate → Validate → Persist → Reflect
+                                                           ↓
+                              (repeat until complete) ←───┘
+```
+
+### Graph Nodes
+
+| Node | Purpose |
+|------|---------|
+| **Listen** | Receive and parse input |
+| **Decide** | Route to appropriate specialist |
+| **Delegate** | Invoke specialist agent |
+| **Validate** | Check output quality |
+| **Persist** | Save validated artifact |
+| **Reflect** | Review progress, decide continue/finish |
+
+## 🛠 Technical Stack
+
+- **Runtime**: Node.js 22+
+- **Language**: TypeScript 5
+- **Workflow**: Temporal.io 1.22
+- **AI Graph**: LangChain/Langgraph
+- **Database**: PostgreSQL 15
+- **Cache**: Redis
+- **Deployment**: Docker + Coolify
+
+## 🚀 Quick Start
+
+### Local Development
+
+```bash
+# Clone the repository
+git clone https://github.com/nanachichan3/startup-factory.git
+cd startup-factory
+
+# Install dependencies
+npm install
+
+# Start infrastructure
+docker-compose up -d
+
+# Run the harness
+npm run dev
+```
+
+### Connect to Temporal UI
+
+Open `http://localhost:8080` to view the Temporal Web UI.
+
+## 📋 Launch Checklist
+
+- [x] Temporal.io integration with workflows
+- [x] Langgraph expert loop implementation
+- [x] A2A protocol message handler
+- [x] Docker compose with PostgreSQL
+- [x] Coolify deployment ready
+- [x] README and documentation
+- [ ] **Deployment to Coolify** (manual step required)
+- [ ] **Temporal UI verified accessible**
+
+## 📚 Documentation
+
+- [Quick Start](./docs/quick-start.md)
+- [API Reference](./docs/api.md)
+- [Deployment Guide](./docs/deployment.md)
+
+## 🔗 Related Repositories
+
+- [startup-template](https://github.com/nanachichan3/startup-template) — Production template for new startups
+
+## License
+
+MIT © Yev Rachkovan

@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  # Temporal Workflow Engine
+  temporal:
+    image: temporalio/auto-setup:1.22.0
+    container_name: startup-factory-temporal
+    ports:
+      - "7233:7233"   # GRPC port
+      - "8233:8233"   # HTTP port
+    environment:
+      - DB=postgresql
+      - DB_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PWD=postgres
+      - POSTGRES_SEEDS=postgres
+    depends_on:
+      - postgres
+    networks:
+      - factory-network
+
+  # Temporal Web UI
+  temporal-web:
+    image: temporalio/web:1.22.0
+    container_name: startup-factory-temporal-web
+    ports:
+      - "8080:8080"
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+    depends_on:
+      - temporal
+    networks:
+      - factory-network
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: startup-factory-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: startup_factory
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - factory-network
+
+  # Redis Cache
+  redis:
+    image: redis:alpine
+    container_name: startup-factory-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - factory-network
+
+  # Factory API Server
+  factory-api:
+    build:
+      context: .
+      dockerfile: packages/harness/Dockerfile
+    container_name: startup-factory-api
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - TEMPORAL_ADDRESS=temporal:7233
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=startup_factory
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - REDIS_HOST=redis
+    depends_on:
+      - temporal
+      - postgres
+      - redis
+    networks:
+      - factory-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  factory-network:
+    driver: bridge

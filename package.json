@@ -1,0 +1,31 @@
+{
+  "name": "startup-factory",
+  "version": "0.1.0",
+  "description": "AI-driven startup creation engine using Temporal, Langgraph, and A2A protocol",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "dev": "npm run dev --workspace=@startup-factory/harness",
+    "start": "npm run start --workspace=@startup-factory/harness",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  },
+  "keywords": [
+    "startup",
+    "ai",
+    "temporal",
+    "langgraph",
+    "a2a",
+    "startup-factory"
+  ],
+  "license": "MIT",
+  "author": "Yev Rachkovan"
+}
