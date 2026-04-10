@@ -2,11 +2,12 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Copy harness package files
+# Copy root package files and lockfile for monorepo
+COPY package*.json ./
 COPY packages/harness/package*.json packages/harness/tsconfig.json ./
 
-# Install dependencies
-RUN npm ci
+# Install dependencies (use install since lockfile is at root, not in harness)
+RUN npm install
 
 # Copy source
 COPY packages/harness/src ./src
@@ -24,7 +25,7 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package*.json ./
 
 # Install production dependencies only
-RUN npm ci --omit=dev --workspaces=false
+RUN npm install --omit=dev
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
