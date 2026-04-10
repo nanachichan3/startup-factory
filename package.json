@@ -27,5 +27,9 @@
     "startup-factory"
   ],
   "license": "MIT",
-  "author": "Yev Rachkovan"
+  "author": "Yev Rachkovan",
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.2"
+  }
 }

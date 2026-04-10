@@ -5,3 +5,9 @@ export {
   type StartupFactoryInput,
   type FactoryState,
 } from './factory-workflow';
+export {
+  runExpertLoopWorkflow,
+  advanceProjectStageWorkflow,
+  type ExpertLoopWorkflowInput,
+  type ExpertLoopWorkflowState,
+} from './expert-loop-workflow';

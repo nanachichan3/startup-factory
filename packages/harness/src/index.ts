@@ -1,8 +1,8 @@
 import { Connection, WorkflowClient } from '@temporalio/client';
 import { factoryActivities } from './workflows/activities';
 import { runStartupFactoryWorkflow } from './workflows/factory-workflow';
-import { runExpertLoop } from './graph/expert-loop';
-import { A2AProtocolHandler, createA2AHandler } from './protocol/a2a';
+import { runExpertLoopGraph } from './graph/expert-loop-graph';
+import { A2AProtocolHandler, createA2AHandler } from './protocol/a2a-handler';
 
 const TEMPORAL_ADDRESS = process.env.TEMPORAL_ADDRESS || 'localhost:7233';
 
@@ -61,7 +61,7 @@ class StartupFactoryHarness {
   }
 
   async runExpertLoop(content: string, maxIterations: number = 3): Promise<string> {
-    return runExpertLoop(content, maxIterations);
+    return runExpertLoopGraph(content, maxIterations);
   }
 
   getA2AHandler(agentId: string): A2AProtocolHandler | undefined {

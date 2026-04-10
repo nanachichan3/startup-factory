@@ -1,0 +1,313 @@
+# Startup Factory - K3s Deployment Manifest
+# Apply with: kubectl apply -f infra/k3s-deployment.yaml
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: startup-factory
+  labels:
+    app: startup-factory
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: startup-factory-config
+  namespace: startup-factory
+data:
+  NODE_ENV: "production"
+  TEMPORAL_ADDRESS: "temporal.startup-factory.svc.cluster.local:7233"
+  POSTGRES_HOST: "postgres.startup-factory.svc.cluster.local"
+  POSTGRES_DB: "startup_factory"
+  REDIS_HOST: "redis.startup-factory.svc.cluster.local"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: startup-factory-api
+  namespace: startup-factory
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: startup-factory-api
+  template:
+    metadata:
+      labels:
+        app: startup-factory-api
+    spec:
+      containers:
+        - name: api
+          image: ghcr.io/nanachichan3/startup-factory:latest
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: startup-factory-config
+            - secretRef:
+                name: startup-factory-secrets
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: startup-factory-api
+  namespace: startup-factory
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3000
+      targetPort: 3000
+  selector:
+    app: startup-factory-api
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: temporal
+  namespace: startup-factory
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: temporal
+  template:
+    metadata:
+      labels:
+        app: temporal
+    spec:
+      containers:
+        - name: temporal
+          image: temporalio/auto-setup:1.22.0
+          ports:
+            - containerPort: 7233
+          env:
+            - name: DB
+              value: "postgresql"
+            - name: POSTGRES_SEEDS
+              value: "postgres.startup-factory.svc.cluster.local"
+            - name: POSTGRES_USER
+              value: "postgres"
+            - name: POSTGRES_PWD
+              valueFrom:
+                secretKeyRef:
+                  name: startup-factory-secrets
+                  key: postgres-password
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: temporal
+  namespace: startup-factory
+spec:
+  type: ClusterIP
+  ports:
+    - port: 7233
+      targetPort: 7233
+  selector:
+    app: temporal
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: temporal-web
+  namespace: startup-factory
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: temporal-web
+  template:
+    metadata:
+      labels:
+        app: temporal-web
+    spec:
+      containers:
+        - name: temporal-web
+          image: temporalio/web:1.22.0
+          ports:
+            - containerPort: 8080
+          env:
+            - name: TEMPORAL_ADDRESS
+              value: "temporal.startup-factory.svc.cluster.local:7233"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: temporal-web
+  namespace: startup-factory
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: temporal-web
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: startup-factory
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: "startup_factory"
+            - name: POSTGRES_USER
+              value: "postgres"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: startup-factory-secrets
+                  key: postgres-password
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: postgres-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: startup-factory
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: 5432
+  selector:
+    app: postgres
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: startup-factory
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: startup-factory
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:alpine
+          ports:
+            - containerPort: 6379
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+      volumes:
+        - name: redis-data
+          emptyDir: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: startup-factory
+spec:
+  type: ClusterIP
+  ports:
+    - port: 6379
+      targetPort: 6379
+  selector:
+    app: redis
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: startup-factory-ingress
+  namespace: startup-factory
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  tls:
+    - hosts:
+        - startup.yourdomain.com
+      secretName: startup-factory-tls
+  rules:
+    - host: startup.yourdomain.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: startup-factory-api
+                port:
+                  number: 3000
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: startup-factory-secrets
+  namespace: startup-factory
+type: Opaque
+stringData:
+  postgres-password: "CHANGE_ME"
+  jwt-secret: "CHANGE_ME"
