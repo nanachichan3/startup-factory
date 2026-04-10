@@ -130,35 +130,33 @@ export default harness;
 // Export Express app for direct use
 export { app };
 
-// Allow running directly
-if (require.main === module) {
-  const server = app.listen(PORT, HOST, () => {
-    console.log(`[HTTP] Server listening on ${HOST}:${PORT}`);
-    console.log(`[HTTP] API endpoints:`);
-    console.log(`  POST /api/startups          - Create a new startup`);
-    console.log(`  GET  /api/startups          - List all startups`);
-    console.log(`  GET  /api/startups/:id      - Get startup details`);
-    console.log(`  PUT  /api/startups/:id/stage - Update startup stage`);
-    console.log(`  POST /api/startups/:id/execute - Trigger expert loop workflow`);
-  });
+// Always start the server when this module is the entry point
+const server = app.listen(PORT, HOST, () => {
+  console.log(`[HTTP] Server listening on ${HOST}:${PORT}`);
+  console.log(`[HTTP] API endpoints:`);
+  console.log(`  POST /api/startups          - Create a new startup`);
+  console.log(`  GET  /api/startups          - List all startups`);
+  console.log(`  GET  /api/startups/:id      - Get startup details`);
+  console.log(`  PUT  /api/startups/:id/stage - Update startup stage`);
+  console.log(`  POST /api/startups/:id/execute - Trigger expert loop workflow`);
+});
 
-  harness.initialize().then(() => {
-    console.log('[Harness] Startup Factory Harness ready');
-    const status = harness.getTemporalStatus();
-    console.log(`[Harness] Temporal: ${status.connected ? 'CONNECTED' : 'NOT CONNECTED'} (${status.type})`);
-    if (status.address) {
-      console.log(`[Harness] Temporal Address: ${status.address}`);
-    }
-    if (status.namespace) {
-      console.log(`[Harness] Temporal Namespace: ${status.namespace}`);
-    }
-  });
+harness.initialize().then(() => {
+  console.log('[Harness] Startup Factory Harness ready');
+  const status = harness.getTemporalStatus();
+  console.log(`[Harness] Temporal: ${status.connected ? 'CONNECTED' : 'NOT CONNECTED'} (${status.type})`);
+  if (status.address) {
+    console.log(`[Harness] Temporal Address: ${status.address}`);
+  }
+  if (status.namespace) {
+    console.log(`[Harness] Temporal Namespace: ${status.namespace}`);
+  }
+});
 
-  // Graceful shutdown
-  process.on('SIGTERM', async () => {
-    console.log('[Harness] Received SIGTERM, shutting down gracefully...');
-    server.close();
-    await harness.shutdown();
-    process.exit(0);
-  });
-}
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('[Harness] Received SIGTERM, shutting down gracefully...');
+  server.close();
+  await harness.shutdown();
+  process.exit(0);
+});
