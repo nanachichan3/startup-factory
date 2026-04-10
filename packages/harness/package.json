@@ -1,0 +1,25 @@
+{
+  "name": "@startup-factory/harness",
+  "version": "0.1.0",
+  "description": "Startup Factory Agent Harness",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts"
+  },
+  "dependencies": {
+    "@temporalio/client": "^1.8.0",
+    "@temporalio/worker": "^1.8.0",
+    "@langchain/langgraph": "^0.0.15",
+    "@langchain/openai": "^0.0.28",
+    "zod": "^3.23.0",
+    "dotenv": "^16.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.0",
+    "ts-node": "^10.9.2"
+  }
+}
