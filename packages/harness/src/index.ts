@@ -3,8 +3,11 @@ import { factoryActivities } from './workflows/activities';
 import { runStartupFactoryWorkflow } from './workflows/factory-workflow';
 import { runExpertLoopGraph } from './graph/expert-loop-graph';
 import { A2AProtocolHandler, createA2AHandler } from './protocol/a2a-handler';
+import http from 'http';
 
 const TEMPORAL_ADDRESS = process.env.TEMPORAL_ADDRESS || 'localhost:7233';
+const PORT = parseInt(process.env.PORT || '3000', 10);
+const HOST = '0.0.0.0';
 
 /**
  * Startup Factory Harness - Main Entry Point
@@ -82,6 +85,20 @@ export default harness;
 
 // Allow running directly
 if (require.main === module) {
+  const server = http.createServer((req, res) => {
+    if (req.url === '/health' || req.url === '/') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ status: 'ok', service: 'startup-factory-harness' }));
+    } else {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ status: 'not found' }));
+    }
+  });
+
+  server.listen(PORT, HOST, () => {
+    console.log(`[HTTP] Server listening on ${HOST}:${PORT}`);
+  });
+
   harness.initialize().then(() => {
     console.log('[Harness] Startup Factory Harness ready');
     console.log('[Harness] Temporal address:', TEMPORAL_ADDRESS);
