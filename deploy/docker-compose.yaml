@@ -13,7 +13,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.startup-factory.rule=Host(`startup-factory.qed.quest`)"
-      - "traefik.http.services.startup-factory.loadbalancer.server.port=3010"
+      - "traefik.http.services.startup-factory.loadbalancer.server.port=3000"
     networks:
       - coolify
 
