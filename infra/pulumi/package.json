@@ -9,8 +9,9 @@
     "destroy": "pulumi destroy"
   },
   "dependencies": {
+    "@pulumi/command": "^1.0.0",
     "@pulumi/pulumi": "^3.0.0",
-    "@pulumi/command": "^1.0.0"
+    "js-base64": "^3.7.8"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

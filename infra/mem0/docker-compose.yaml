@@ -1,22 +1,18 @@
 version: '3.8'
-
 services:
   mem0:
     image: mem0ai/mem0:latest
     ports:
-      - "5000:5000"
+      - "5010:5000"
     environment:
       - REDIS_URL=redis://redis:6379
-      - DATABASE_URL=sqlite:///data/mem0.db
-    volumes:
-      - mem0_data:/data
     networks:
       - mem0_network
 
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "6380:6379"
     networks:
       - mem0_network
 
@@ -25,5 +21,4 @@ volumes:
 
 networks:
   mem0_network:
-    name: mem0_network
     driver: bridge

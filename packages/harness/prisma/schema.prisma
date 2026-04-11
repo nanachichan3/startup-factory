@@ -1,5 +1,10 @@
 // Prisma Schema for Startup Factory
 // This defines the data model for startups, lifecycle stages, artifacts, and agents
+//
+// NocoDB Compatibility Notes:
+// - Use PostgreSQL comments to store NocoDB column meta
+// - Color codes are stored as: {"ncDisplayType": "Select", "color": "#RRGGBB"}
+// - All select/enum fields should have color comments
 
 generator client {
   provider = "prisma-client-js"
@@ -11,12 +16,14 @@ datasource db {
 }
 
 // Startup model - represents a startup idea/project
+// @@map("startups")
+// NocoDB: stage column color coded by startup lifecycle stage
 model Startup {
   id                  String    @id @default(cuid())
   name                String
   description         String
   founderBrief        String    @default("")
-  stage               String    @default("idea") // idea, gtm, mvp, launch, growth, scale
+  stage               String    @default("idea") // idea, validation, mvp, launch, distribution, pmf, support, exit
   currentWorkflowId   String?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
@@ -31,13 +38,14 @@ model Startup {
 }
 
 // Artifact model - documents and outputs from the expert loop
+// NocoDB: type column uses color coding for artifact categories
 model Artifact {
   id          String    @id @default(cuid())
   startupId   String
-  type        String    // tech_architecture, gtm_strategy, mvp_spec, content_plan, etc.
+  type        String    // tech_architecture=#3498DB, gtm_strategy=#E74C3C, mvp_spec=#E67E22, content_plan=#9B59B6
   title       String
   content     String    @db.Text
-  agentRole   String?   // cto, cmo, etc.
+  agentRole   String?   // cto=#3498DB, cmo=#E74C3C, ceo=#9B59B6
   iteration   Int       @default(1)
   metadata    Json?     // Additional metadata
   createdAt   DateTime  @default(now())
@@ -49,12 +57,13 @@ model Artifact {
 }
 
 // LifecycleEvent model - tracks stage transitions and key events
+// NocoDB: eventType uses color coding
 model LifecycleEvent {
   id          String    @id @default(cuid())
   startupId   String
   fromStage   String?
   toStage     String
-  eventType   String    // stage_advance, workflow_start, workflow_complete, artifact_created
+  eventType   String    // stage_advance=#2ECC71, workflow_start=#3498DB, workflow_complete=#9B59B6, artifact_created=#E67E22
   metadata    Json?     // Event-specific data
   createdAt   DateTime  @default(now())
 
@@ -65,11 +74,12 @@ model LifecycleEvent {
 }
 
 // Agent model - represents factory agents (CEO, CTO, CMO)
+// NocoDB: role uses color coding
 model Agent {
   id          String    @id @default(cuid())
   name        String    @unique // ceo, cto, cmo
   displayName String
-  role        String    // coordinator, technologist, marketer
+  role        String    // coordinator=#9B59B6, technologist=#3498DB, marketer=#E74C3C
   systemPrompt String   @db.Text
   isActive    Boolean   @default(true)
   createdAt   DateTime  @default(now())
@@ -84,12 +94,13 @@ model Agent {
 }
 
 // AgentAssignment model - tracks which agent is handling which startup/stage
+// NocoDB: status uses color coding
 model AgentAssignment {
   id          String    @id @default(cuid())
   agentId     String
   startupId   String
   stage       String    // The stage this agent is assigned to work on
-  status      String    @default("pending") // pending, in_progress, completed
+  status      String    @default("pending") // pending=#95A5A6, in_progress=#F39C12, completed=#2ECC71
   notes       String?   @db.Text
   assignedAt  DateTime  @default(now())
   completedAt DateTime?
@@ -103,11 +114,12 @@ model AgentAssignment {
 }
 
 // AgentMessage model - A2A messages between agents
+// NocoDB: type uses color coding
 model AgentMessage {
   id          String    @id @default(cuid())
   senderId    String
   recipientId String
-  type        String    // REQUEST, RESPONSE, UPDATE, ERROR
+  type        String    // REQUEST=#3498DB, RESPONSE=#2ECC71, UPDATE=#F39C12, ERROR=#E74C3C
   payload     Json
   workflowId  String?
   runId       String?
@@ -121,12 +133,13 @@ model AgentMessage {
 }
 
 // WorkflowRun model - tracks Temporal workflow executions
+// NocoDB: status uses color coding
 model WorkflowRun {
   id            String    @id @default(cuid())
   workflowId    String    @unique // Temporal workflow ID
   startupId     String
   type          String    // factory, expert_loop, advance_stage
-  status        String    // running, completed, failed, cancelled
+  status        String    // running=#3498DB, completed=#2ECC71, failed=#E74C3C, cancelled=#95A5A6
   input         Json?
   output        Json?
   error         String?   @db.Text
@@ -137,11 +150,12 @@ model WorkflowRun {
 }
 
 // Document model - general purpose document storage
+// NocoDB: type uses color coding
 model Document {
   id          String    @id @default(cuid())
   startupId   String
   title       String
-  type        String    // brief, spec, plan, report, etc.
+  type        String    // brief=#9B59B6, spec=#3498DB, plan=#E67E22, report=#2ECC71
   content     String    @db.Text
   metadata    Json?
   createdAt   DateTime  @default(now())

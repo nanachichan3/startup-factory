@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
+import { prisma, STARTUP_STAGES, isDatabaseHealthy, initializeDatabase } from '../../db/client.js';
 import { temporalCloud } from '../../temporal/cloud.js';
 
-// In-memory store for when DB is not available
-const memoryStore: Map<string, any> = new Map();
-const startupList: any[] = [];
+// Initialize database on module load
+initializeDatabase().catch(console.error);
 
 /**
  * POST /api/startups
@@ -18,18 +18,28 @@ export async function createStartup(req: Request, res: Response): Promise<void> 
       return;
     }
 
-    const startup = {
-      id: `startup-${Date.now()}`,
-      name,
-      description,
-      founderBrief: founderBrief || '',
-      stage: stage || 'idea',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    // Validate stage if provided
+    const validStage = stage && STARTUP_STAGES.includes(stage) ? stage : 'idea';
 
-    startupList.push(startup);
-    memoryStore.set(startup.id, startup);
+    const startup = await prisma.startup.create({
+      data: {
+        name,
+        description,
+        founderBrief: founderBrief || '',
+        stage: validStage
+      }
+    });
+
+    // Create initial lifecycle event
+    await prisma.lifecycleEvent.create({
+      data: {
+        startupId: startup.id,
+        fromStage: null,
+        toStage: startup.stage,
+        eventType: 'created',
+        metadata: { name: startup.name }
+      }
+    });
 
     console.log(`[API] Created startup: ${startup.id} - ${startup.name}`);
     res.status(201).json(startup);
@@ -45,7 +55,20 @@ export async function createStartup(req: Request, res: Response): Promise<void> 
  */
 export async function listStartups(_req: Request, res: Response): Promise<void> {
   try {
-    res.json({ startups: startupList, count: startupList.length });
+    const startups = await prisma.startup.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        _count: {
+          select: { artifacts: true, lifecycleEvents: true }
+        }
+      }
+    });
+
+    res.json({ 
+      startups, 
+      count: startups.length,
+      stages: STARTUP_STAGES
+    });
   } catch (error) {
     console.error('[API] Error listing startups:', error);
     res.status(500).json({ error: 'Failed to list startups' });
@@ -60,13 +83,23 @@ export async function getStartup(req: Request, res: Response): Promise<void> {
   try {
     const id = req.params.id as string;
 
-    const startup = memoryStore.get(id);
-    if (startup) {
-      res.json(startup);
+    const startup = await prisma.startup.findUnique({
+      where: { id },
+      include: {
+        artifacts: { orderBy: { createdAt: 'desc' } },
+        lifecycleEvents: { orderBy: { createdAt: 'desc' } },
+        agentAssignments: {
+          include: { agent: true }
+        }
+      }
+    });
+
+    if (!startup) {
+      res.status(404).json({ error: 'Startup not found' });
       return;
     }
 
-    res.status(404).json({ error: 'Startup not found' });
+    res.json(startup);
   } catch (error) {
     console.error('[API] Error getting startup:', error);
     res.status(500).json({ error: 'Failed to get startup' });
@@ -87,21 +120,41 @@ export async function updateStartupStage(req: Request, res: Response): Promise<v
       return;
     }
 
-    const validStages = ['idea', 'gtm', 'mvp', 'launch', 'growth', 'scale'];
-    if (!validStages.includes(stage)) {
-      res.status(400).json({ error: `Invalid stage. Must be one of: ${validStages.join(', ')}` });
+    if (!STARTUP_STAGES.includes(stage)) {
+      res.status(400).json({ 
+        error: `Invalid stage. Must be one of: ${STARTUP_STAGES.join(', ')}` 
+      });
       return;
     }
 
-    const startup = memoryStore.get(id);
-    if (startup) {
-      startup.stage = stage;
-      startup.updatedAt = new Date().toISOString();
-      res.json(startup);
+    // Get current startup to record transition
+    const currentStartup = await prisma.startup.findUnique({ where: { id } });
+    if (!currentStartup) {
+      res.status(404).json({ error: 'Startup not found' });
       return;
     }
 
-    res.status(404).json({ error: 'Startup not found' });
+    const previousStage = currentStartup.stage;
+
+    // Update startup
+    const startup = await prisma.startup.update({
+      where: { id },
+      data: { stage }
+    });
+
+    // Record lifecycle event
+    await prisma.lifecycleEvent.create({
+      data: {
+        startupId: id,
+        fromStage: previousStage,
+        toStage: stage,
+        eventType: 'stage_advance',
+        metadata: { previousStage, newStage: stage }
+      }
+    });
+
+    console.log(`[API] Updated startup ${id} stage: ${previousStage} -> ${stage}`);
+    res.json(startup);
   } catch (error) {
     console.error('[API] Error updating startup stage:', error);
     res.status(500).json({ error: 'Failed to update startup stage' });
@@ -116,7 +169,7 @@ export async function executeWorkflow(req: Request, res: Response): Promise<void
   try {
     const id = req.params.id as string;
 
-    const startup = memoryStore.get(id);
+    const startup = await prisma.startup.findUnique({ where: { id } });
     if (!startup) {
       res.status(404).json({ error: 'Startup not found' });
       return;
@@ -124,15 +177,65 @@ export async function executeWorkflow(req: Request, res: Response): Promise<void
 
     // Check if Temporal is connected
     if (!temporalCloud.isReady()) {
-      res.status(503).json({ 
-        error: 'Temporal not connected',
-        message: 'Please configure TEMPORAL_ADDRESS and TEMPORAL_NAMESPACE environment variables',
-        hint: 'Get a free Temporal Cloud namespace at https://cloud.temporal.io'
+      // Fallback: simulate workflow execution without Temporal
+      console.log(`[API] Temporal not connected - simulating workflow for startup ${id}`);
+
+      // Create a simulated workflow run
+      const workflowRun = await prisma.workflowRun.create({
+        data: {
+          workflowId: `simulated-${Date.now()}`,
+          startupId: id,
+          type: 'factory',
+          status: 'running',
+          input: {
+            projectName: startup.name,
+            projectDescription: startup.description,
+            initialStage: startup.stage,
+            founderBrief: startup.founderBrief
+          }
+        }
+      });
+
+      // Update startup with workflow ID
+      await prisma.startup.update({
+        where: { id },
+        data: { 
+          currentWorkflowId: workflowRun.workflowId,
+          lastExecutedAt: new Date()
+        }
+      });
+
+      // Create lifecycle event
+      await prisma.lifecycleEvent.create({
+        data: {
+          startupId: id,
+          fromStage: null,
+          toStage: startup.stage,
+          eventType: 'workflow_start',
+          metadata: { workflowId: workflowRun.workflowId, simulated: true }
+        }
+      });
+
+      // Complete the workflow immediately (simulation)
+      await prisma.workflowRun.update({
+        where: { id: workflowRun.id },
+        data: { 
+          status: 'completed',
+          completedAt: new Date(),
+          output: { message: 'Workflow simulation completed successfully' }
+        }
+      });
+
+      res.json({ 
+        startupId: id, 
+        workflowId: workflowRun.workflowId,
+        status: 'simulated',
+        message: 'Expert loop workflow simulated (Temporal not connected)'
       });
       return;
     }
 
-    // Start the workflow
+    // Start the workflow with Temporal
     const workflowId = await temporalCloud.startWorkflow({
       projectName: startup.name,
       projectDescription: startup.description,
@@ -140,10 +243,40 @@ export async function executeWorkflow(req: Request, res: Response): Promise<void
       founderBrief: startup.founderBrief,
     });
 
+    // Record workflow run
+    await prisma.workflowRun.create({
+      data: {
+        workflowId,
+        startupId: id,
+        type: 'factory',
+        status: 'running',
+        input: {
+          projectName: startup.name,
+          projectDescription: startup.description,
+          initialStage: startup.stage
+        }
+      }
+    });
+
     // Update startup with workflow ID
-    startup.currentWorkflowId = workflowId;
-    startup.lastExecutedAt = new Date().toISOString();
-    memoryStore.set(id, startup);
+    await prisma.startup.update({
+      where: { id },
+      data: { 
+        currentWorkflowId: workflowId,
+        lastExecutedAt: new Date()
+      }
+    });
+
+    // Create lifecycle event
+    await prisma.lifecycleEvent.create({
+      data: {
+        startupId: id,
+        fromStage: null,
+        toStage: startup.stage,
+        eventType: 'workflow_start',
+        metadata: { workflowId }
+      }
+    });
 
     console.log(`[API] Started workflow ${workflowId} for startup ${id}`);
     res.json({ 
@@ -156,4 +289,25 @@ export async function executeWorkflow(req: Request, res: Response): Promise<void
     console.error('[API] Error executing workflow:', error);
     res.status(500).json({ error: 'Failed to execute workflow' });
   }
+}
+
+/**
+ * GET /api/health
+ * Health check endpoint
+ */
+export async function healthCheck(_req: Request, res: Response): Promise<void> {
+  const dbHealthy = await isDatabaseHealthy();
+  const temporalReady = temporalCloud.isReady();
+
+  const status = dbHealthy ? 'ok' : 'degraded';
+
+  res.json({ 
+    status, 
+    service: 'startup-factory-api',
+    timestamp: new Date().toISOString(),
+    dependencies: {
+      database: dbHealthy ? 'connected' : 'disconnected',
+      temporal: temporalReady ? 'connected' : 'disconnected'
+    }
+  });
 }
