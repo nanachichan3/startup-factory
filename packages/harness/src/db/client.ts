@@ -6,13 +6,30 @@ declare global {
   var prisma: PrismaClient | undefined;
 }
 
-const prisma = global.prisma || new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error', 'warn'],
-});
+// Check if DATABASE_URL is configured
+const hasDatabaseUrl = process.env.DATABASE_URL && 
+  !process.env.DATABASE_URL.includes('placeholder') &&
+  process.env.DATABASE_URL.startsWith('postgresql://');
 
-if (process.env.NODE_ENV !== 'production') {
-  global.prisma = prisma;
+// Create Prisma client only if DATABASE_URL is valid
+let prisma: PrismaClient | null = null;
+
+if (hasDatabaseUrl) {
+  prisma = global.prisma || new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error', 'warn'],
+  });
+  
+  if (process.env.NODE_ENV !== 'production') {
+    global.prisma = prisma;
+  }
+  
+  console.log('[DB] Prisma client initialized with DATABASE_URL');
+} else {
+  console.warn('[DB] DATABASE_URL not configured or is placeholder - running in demo mode without database');
 }
+
+// Export prisma (may be null if no database)
+export { prisma };
 
 // Valid startup stages (8-stage lifecycle)
 export const STARTUP_STAGES = [
@@ -42,6 +59,8 @@ export const STAGE_COLORS: Record<StartupStage, string> = {
 
 // Check if DB connection is healthy
 export async function isDatabaseHealthy(): Promise<boolean> {
+  if (!prisma) return false;
+  
   try {
     await prisma.$queryRaw`SELECT 1`;
     return true;
@@ -53,6 +72,11 @@ export async function isDatabaseHealthy(): Promise<boolean> {
 
 // Initialize database with default agents if they don't exist
 export async function initializeDatabase(): Promise<void> {
+  if (!prisma) {
+    console.log('[DB] Skipping database initialization - running without database');
+    return;
+  }
+  
   try {
     // Seed default factory agents
     const agents = [
@@ -90,5 +114,4 @@ export async function initializeDatabase(): Promise<void> {
   }
 }
 
-export { prisma };
 export default prisma;

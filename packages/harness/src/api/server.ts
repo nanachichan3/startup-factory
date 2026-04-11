@@ -1,6 +1,5 @@
 import express, { Request, Response, NextFunction } from 'express';
-import { createStartup, getStartup, listStartups, updateStartupStage, executeWorkflow, createArtifact, listStages } from './routes/startups.js';
-import { TemporalCloudProvider } from '../temporal/cloud.js';
+import { createStartup, getStartup, listStartups, updateStartupStage, executeWorkflow, healthCheck } from './routes/startups.js';
 
 const app = express();
 
@@ -15,13 +14,7 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 });
 
 // Health check
-app.get('/health', (_req: Request, res: Response) => {
-  res.json({ 
-    status: 'ok', 
-    service: 'startup-factory-api',
-    timestamp: new Date().toISOString()
-  });
-});
+app.get('/health', healthCheck);
 
 // Startup CRUD routes
 app.post('/api/startups', createStartup);
@@ -29,14 +22,8 @@ app.get('/api/startups', listStartups);
 app.get('/api/startups/:id', getStartup);
 app.put('/api/startups/:id/stage', updateStartupStage);
 
-// Artifacts
-app.post('/api/startups/:id/artifacts', createArtifact);
-
 // Workflow trigger
 app.post('/api/startups/:id/execute', executeWorkflow);
-
-// Lifecycle stages
-app.get('/api/stages', listStages);
 
 // Error handler
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
