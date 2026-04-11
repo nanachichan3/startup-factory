@@ -1,152 +1,121 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as command from "@pulumi/command";
 
+// Configuration
 const config = new pulumi.Config();
 const coolifyApiUrl = "https://qed.quest/api/v1";
 const coolifyApiKey = config.requireSecret("coolifyApiKey");
-const projectUuid = "k8kgkwocskk4k084k0s0ko48";
+
+// Application details
+const applicationUuid = "jock4w84c48s4o44gs0scso4";
+const projectUuid = "k8kgkwocskk4o44gs0scso4";
 const environmentName = "production";
-const serverUuid = "bowowgww8cw08kokogk88oss";
-const appUuid = "jock4w84c48s4o44gs0scso4";
 
-// Database config — projects DB already exists on pg-nanachi
-const dbHost = "x0k4w8404wckwwcswg808gco";
-const dbPort = 5432;
-const dbName = "projects";
-const dbUser = "postgres";
+// Environment variables for the startup-factory harness
+const envVars = [
+  { key: "DATABASE_URL", value: "postgresql://postgres:${COOLIFY_DATABASE_PASSWORD}@x0k4w8404wckwwcswg808gco:5432/projects", isBuildVariable: false },
+  { key: "TEMPORAL_ADDRESS", value: "", isBuildVariable: false },
+  { key: "TEMPORAL_NAMESPACE", value: "", isBuildVariable: false },
+  { key: "TEMPORAL_API_KEY", value: "", isBuildVariable: false },
+  { key: "OPENROUTER_API_KEY", value: "${OPENROUTER_API_KEY}", isBuildVariable: false },
+  { key: "PORT", value: "3000", isBuildVariable: false },
+  { key: "NODE_ENV", value: "production", isBuildVariable: false },
+];
 
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-function coolifyHeaders(): string {
-  return `-H "Authorization: Bearer ${coolifyApiKey}" -H "Content-Type: application/json"`;
-}
-
-async function curl(method: string, path: string, body?: string): Promise<any> {
-  const url = `${coolifyApiUrl}${path}`;
-  const bodyArg = body ? `-d '${body}'` : '';
-  const cmd = `curl -s -X ${method} "${url}" ${coolifyHeaders()} ${bodyArg}`;
-  const result = await command.local.run({ command: cmd });
-  try {
-    return JSON.parse(result.stdout);
-  } catch {
-    return result.stdout;
-  }
-}
-
-// ============================================================================
-// 1. Run Prisma Migration on projects DB
-// ============================================================================
-
-const dbMigration = new command.local.Command("db-migration", {
-  create: pulumi.interpolate`
-    echo "Running Prisma migration on projects DB..."
-    cd /tmp/startup-factory/packages/harness && \
-    DATABASE_URL="postgresql://postgres:${config.requireSecret("dbPassword")}@${dbHost}:${dbPort}/${dbName}" \
-    npx prisma migrate deploy --schema=./prisma/schema.prisma 2>&1 || \
-    echo "Migration may already be applied or DB not reachable from this host"
-  `,
-  delete: `echo "No-op on delete — migrations are idempotent"`,
-});
-
-// ============================================================================
-// 2. Deploy Mem0 (Persistent Memory)
-// ============================================================================
-
-const mem0Service = new command.local.Command("mem0-service", {
-  create: `curl -s -X POST "${coolifyApiUrl}/services" ${coolifyHeaders()} -d '{
-    "name": "mem0",
-    "project_uuid": "${projectUuid}",
-    "environment_name": "${environmentName}",
-    "server_uuid": "${serverUuid}",
-    "docker_compose_raw": ${JSON.stringify(`version: '3.8'
-services:
-  mem0:
-    image: mem0ai/mem0:latest
-    ports:
-      - "5000:5000"
-    environment:
-      - REDIS_URL=redis://redis:6379
-      - DATABASE_URL=sqlite:///data/mem0.db
-    volumes:
-      - mem0_data:/data
-    networks:
-      - coolify
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    networks:
-      - coolify
-volumes:
-  mem0_data:
-networks:
-  coolify:
-    external: true`)}
-  }'`,
-  delete: `curl -s -X DELETE "${coolifyApiUrl}/services/mem0" ${coolifyHeaders()}`,
-}, { dependsOn: [] });
-
-// ============================================================================
-// 3. Update Startup Factory Harness (pull latest image, update env)
-// ============================================================================
-
-const harnessUpdate = new command.local.Command("harness-update", {
-  create: `curl -s -X PUT "${coolifyApiUrl}/applications/${appUuid}" ${coolifyHeaders()} -d '{
-    "name": "startup-factory",
-    "health_check_enabled": true,
-    "health_check_path": "/health",
-    "ports_exposes": "3010,5001",
-    "docker_compose_raw": ${JSON.stringify(`version: '3.8'
+// Docker compose configuration for the startup-factory harness
+const dockerComposeRaw = Buffer.from(`
+version: '3.8'
 services:
   startup-factory:
-    image: ghcr.io/nanachichan3/startup-factory:latest
-    ports:
-      - "3010:3000"
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
     environment:
       - PORT=3000
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://postgres:\${POSTGRES_PASSWORD}@${dbHost}:${dbPort}/${dbName}
-      - TEMPORAL_ADDRESS=\${TEMPORAL_ADDRESS}
-      - TEMPORAL_NAMESPACE=\${TEMPORAL_NAMESPACE}
-      - TEMPORAL_API_KEY=\${TEMPORAL_API_KEY}
-      - OPENROUTER_API_KEY=\${OPENROUTER_API_KEY}
+      - 'DATABASE_URL=\${DATABASE_URL}'
+      - 'TEMPORAL_ADDRESS=\${TEMPORAL_ADDRESS}'
+      - 'TEMPORAL_NAMESPACE=\${TEMPORAL_NAMESPACE}'
+      - 'TEMPORAL_API_KEY=\${TEMPORAL_API_KEY}'
+      - 'OPENROUTER_API_KEY=\${OPENROUTER_API_KEY}'
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 15s
     restart: unless-stopped
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.startup-factory.rule=Host(\`startup-factory.qed.quest\`)"
       - "traefik.http.services.startup-factory.loadbalancer.server.port=3000"
+      - "traefik.http.routers.startup-factory.tls=true"
+      - "traefik.http.routers.startup-factory.tls.certresolver=letsencrypt"
     networks:
       - coolify
+
 networks:
   coolify:
-    external: true`)}
-  }'`,
-}, { dependsOn: [dbMigration] });
+    external: true
+`).toString('base64');
 
-// ============================================================================
-// 4. Trigger redeploy
-// ============================================================================
+// 1. Update application with dockercompose build and remove static_image
+// PATCH /api/v1/applications/{uuid}
+const updateApp = new command.local.Command("update-application", {
+    create: coolifyApiKey.apply(apiKey => {
+        const body = JSON.stringify({
+            buildPack: "dockercompose",
+            dockerComposeRaw: dockerComposeRaw,
+            staticImage: null,  // IMPORTANT: Remove nginx static image
+            healthCheckEnabled: true,
+            healthCheckPath: "/health",
+            healthCheckMethod: "GET",
+            healthCheckPort: 3000,
+            healthCheckRetries: 5,
+            healthCheckTimeout: 10,
+            healthCheckInterval: 30,
+            healthCheckStartPeriod: 15,
+            healthCheckResponseText: "ok",
+            healthCheckScheme: "http",
+            healthCheckHost: "localhost",
+        });
 
-const harnessDeploy = new command.local.Command("harness-deploy", {
-  create: `curl -s -X POST "${coolifyApiUrl}/deployments" ${coolifyHeaders()} -d '{
-    "application_id": "${appUuid}",
-    "is_force": true
-  }'`,
-  delete: `echo "No-op on delete"`,
-}, { dependsOn: [harnessUpdate] });
+        const curlCmd = `curl -s -X PATCH "${coolifyApiUrl}/applications/${applicationUuid}" ` +
+            `-H "Authorization: Bearer ${apiKey}" ` +
+            `-H "Content-Type: application/json" ` +
+            `-d '${body}'`;
 
-// ============================================================================
-// EXPORTS
-// ============================================================================
+        return curlCmd;
+    }),
+});
 
-export const harnessUrl = "http://startup-factory.qed.quest";
-export const mem0Url = "http://mem0.qed.quest";
-export const dbHost = dbHost;
-export const dbName = dbName;
+// 2. Update environment variables
+// POST /api/v1/applications/{uuid}/envs
+const updateEnvVarsCmd = new command.local.Command("update-env-vars", {
+    create: coolifyApiKey.apply(apiKey => {
+        const body = JSON.stringify(envVars);
+
+        const curlCmd = `curl -s -X POST "${coolifyApiUrl}/applications/${applicationUuid}/envs" ` +
+            `-H "Authorization: Bearer ${apiKey}" ` +
+            `-H "Content-Type: application/json" ` +
+            `-d '${body}'`;
+
+        return curlCmd;
+    }),
+}, { dependsOn: [updateApp] });
+
+// 3. Deploy the application
+// GET /api/v1/deploy?uuid={uuid}&force=true
+const deployApp = new command.local.Command("deploy-application", {
+    create: coolifyApiKey.apply(apiKey => {
+        const curlCmd = `curl -s -X GET "${coolifyApiUrl}/deploy?uuid=${applicationUuid}&force=true" ` +
+            `-H "Authorization: Bearer ${apiKey}"`;
+
+        return curlCmd;
+    }),
+}, { dependsOn: [updateEnvVarsCmd] });
+
+// Export deployment info
+export const applicationUrl = "https://startup-factory.qed.quest";
+export const healthCheckUrl = `${applicationUrl}/health`;
+export const applicationUuidOutput = applicationUuid;

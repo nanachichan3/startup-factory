@@ -2,17 +2,16 @@ version: '3.8'
 services:
   startup-factory:
     build:
-      context: ..
+      context: .
       dockerfile: deploy/Dockerfile
     environment:
       - PORT=3000
       - NODE_ENV=production
-      - DATABASE_URL=${DATABASE_URL}
-      - TEMPORAL_ADDRESS=${TEMPORAL_ADDRESS}
-      - TEMPORAL_NAMESPACE=${TEMPORAL_NAMESPACE}
-      - TEMPORAL_API_KEY=${TEMPORAL_API_KEY}
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
-      - MEM0_URL=http://mem0:5000
+      - 'DATABASE_URL=${DATABASE_URL}'
+      - 'TEMPORAL_ADDRESS=${TEMPORAL_ADDRESS}'
+      - 'TEMPORAL_NAMESPACE=${TEMPORAL_NAMESPACE}'
+      - 'TEMPORAL_API_KEY=${TEMPORAL_API_KEY}'
+      - 'OPENROUTER_API_KEY=${OPENROUTER_API_KEY}'
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s
