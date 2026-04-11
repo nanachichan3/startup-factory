@@ -1,5 +1,5 @@
 import express, { Request, Response, NextFunction } from 'express';
-import { createStartup, getStartup, listStartups, updateStartupStage, executeWorkflow } from './routes/startups.js';
+import { createStartup, getStartup, listStartups, updateStartupStage, executeWorkflow, createArtifact, listStages } from './routes/startups.js';
 import { TemporalCloudProvider } from '../temporal/cloud.js';
 
 const app = express();
@@ -29,8 +29,14 @@ app.get('/api/startups', listStartups);
 app.get('/api/startups/:id', getStartup);
 app.put('/api/startups/:id/stage', updateStartupStage);
 
+// Artifacts
+app.post('/api/startups/:id/artifacts', createArtifact);
+
 // Workflow trigger
 app.post('/api/startups/:id/execute', executeWorkflow);
+
+// Lifecycle stages
+app.get('/api/stages', listStages);
 
 // Error handler
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {

@@ -1,23 +1,36 @@
 version: '3.8'
-
 services:
   startup-factory:
     build:
       context: ..
-      dockerfile: Dockerfile
+      dockerfile: deploy/Dockerfile
     ports:
       - "3010:3000"
     environment:
       - PORT=3000
       - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - TEMPORAL_ADDRESS=${TEMPORAL_ADDRESS}
+      - TEMPORAL_NAMESPACE=${TEMPORAL_NAMESPACE}
+      - TEMPORAL_API_KEY=${TEMPORAL_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - MEM0_URL=http://mem0:5000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.startup-factory.rule=Host(`startup-factory.qed.quest`)"
       - "traefik.http.services.startup-factory.loadbalancer.server.port=3000"
+      - "traefik.http.routers.startup-factory.tls=true"
+      - "traefik.http.routers.startup-factory.tls.certresolver=letsencrypt"
     networks:
       - coolify
 
 networks:
   coolify:
     external: true
-    name: coolify

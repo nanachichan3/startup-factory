@@ -4,6 +4,7 @@ import { runStartupFactoryWorkflow } from './workflows/factory-workflow.js';
 import { runExpertLoopGraph } from './graph/expert-loop-graph.js';
 import { A2AProtocolHandler, createA2AHandler } from './protocol/a2a-handler.js';
 import { TemporalCloudProvider, temporalCloud } from './temporal/cloud.js';
+import { execSync } from 'child_process';
 import app from './api/server.js';
 
 const TEMPORAL_ADDRESS = process.env.TEMPORAL_ADDRESS || 'localhost:7233';
@@ -33,6 +34,9 @@ class StartupFactoryHarness {
   async initialize(): Promise<void> {
     console.log('[Harness] Initializing Startup Factory Harness...');
 
+    // Run database migrations
+    await this.runMigrations();
+
     // Try to connect to Temporal (Cloud or self-hosted)
     await this.initializeTemporal();
 
@@ -42,6 +46,29 @@ class StartupFactoryHarness {
     this.a2aHandlers.set('cmo', createA2AHandler('cmo'));
 
     console.log('[Harness] A2A handlers initialized for CEO, CTO, CMO');
+  }
+
+  private async runMigrations(): Promise<void> {
+    if (!process.env.DATABASE_URL) {
+      console.warn('[Harness] DATABASE_URL not set — skipping migrations');
+      return;
+    }
+    try {
+      console.log('[Harness] Running database migrations...');
+      execSync('npx prisma migrate deploy --schema=./prisma/schema.prisma', {
+        stdio: 'pipe',
+        cwd: '/app',
+        env: { ...process.env },
+      });
+      console.log('[Harness] Database migrations complete');
+    } catch (error: any) {
+      const msg = error.stderr?.toString() || error.message || '';
+      if (msg.includes('already up to date') || msg.includes('no pending migrations')) {
+        console.log('[Harness] Database migrations already up to date');
+      } else {
+        console.warn('[Harness] Migration warning:', msg.substring(0, 200));
+      }
+    }
   }
 
   private async initializeTemporal(): Promise<void> {
