@@ -1,0 +1,52 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: temporal-postgres
+    environment:
+      POSTGRES_DB: temporal
+      POSTGRES_USER: temporal
+      POSTGRES_PASSWORD: temporal_pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - temporal-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U temporal"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  temporal:
+    image: temporalio/auto-setup:1.25.0
+    container_name: temporal-server
+    environment:
+      - DB=postgresql
+      - DB_PORT=5432
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=temporal_pass
+      - POSTGRES_SEEDS=postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - temporal-network
+    ports:
+      - "7233:7233"
+      - "8080:8080"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.tcp.routers.temporal.rule=Host(`temporal.qed.quest`)"
+      - "traefik.tcp.routers.temporal.entrypoints=gRPC"
+      - "traefik.tcp.routers.temporal.tls=true"
+      - "traefik.tcp.services.temporal.loadbalancer.server.port=7233"
+      - "traefik.http.routers.temporal-web.rule=Host(`temporal.qed.quest`)"
+      - "traefik.http.routers.temporal-web.tls=true"
+      - "traefik.http.services.temporal-web.loadbalancer.server.port=8080"
+
+volumes:
+  postgres_data:
+
+networks:
+  temporal-network:
+    driver: bridge
