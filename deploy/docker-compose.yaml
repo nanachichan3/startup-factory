@@ -1,23 +1,15 @@
 version: '3.8'
 services:
   startup-factory:
-    build:
-      context: .
-      dockerfile: deploy/Dockerfile
+    image: ghcr.io/nanachichan3/startup-factory:latest
     environment:
       - PORT=3000
       - NODE_ENV=production
-      - 'DATABASE_URL=${DATABASE_URL}'
-      - 'TEMPORAL_ADDRESS=${TEMPORAL_ADDRESS}'
-      - 'TEMPORAL_NAMESPACE=${TEMPORAL_NAMESPACE}'
-      - 'TEMPORAL_API_KEY=${TEMPORAL_API_KEY}'
-      - 'OPENROUTER_API_KEY=${OPENROUTER_API_KEY}'
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 15s
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:placeholder@x0k4w8404wckwwcswg808gco:5432/projects}
+      - TEMPORAL_ADDRESS=${TEMPORAL_ADDRESS:-}
+      - TEMPORAL_NAMESPACE=${TEMPORAL_NAMESPACE:-}
+      - TEMPORAL_API_KEY=${TEMPORAL_API_KEY:-}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
     restart: unless-stopped
     labels:
       - "traefik.enable=true"
