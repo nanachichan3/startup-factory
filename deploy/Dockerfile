@@ -2,10 +2,8 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Copy root package files
+# Copy root package files for monorepo
 COPY package*.json ./
-
-# Copy harness package files
 COPY packages/harness/package*.json packages/harness/tsconfig.json ./
 
 # Install all dependencies (including dev for prisma generate)
@@ -28,12 +26,16 @@ WORKDIR /app
 
 # Install production deps + prisma CLI (for migrate deploy on startup)
 COPY package*.json ./
+COPY packages/harness/package*.json ./
 RUN npm install --omit=dev && npm install prisma@5.22.0
 
 # Copy prisma schema and generated client
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+
+# Copy ALL production node_modules from builder (includes @temporalio, @langchain, etc.)
+COPY --from=builder /app/node_modules ./node_modules
 
 # Copy built artifacts
 COPY --from=builder /app/dist ./dist

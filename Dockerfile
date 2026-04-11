@@ -2,16 +2,19 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Copy root package files and lockfile for monorepo
+# Copy root package files for monorepo
 COPY package*.json ./
 COPY packages/harness/package*.json packages/harness/tsconfig.json ./
 
-# Install dependencies (use install since lockfile is at root, not in harness)
+# Install all dependencies (including dev for prisma generate)
 RUN npm install
 
 # Copy source and prisma schema
 COPY packages/harness/src ./src
 COPY packages/harness/prisma ./prisma
+
+# Generate Prisma client
+RUN npx prisma@5.22.0 generate --schema=./prisma/schema.prisma
 
 # Build TypeScript
 RUN npm run build
@@ -21,16 +24,24 @@ FROM node:22-alpine
 
 WORKDIR /app
 
+# Install production deps + prisma CLI (for migrate deploy on startup)
+COPY package*.json ./
+COPY packages/harness/package*.json ./
+RUN npm install --omit=dev && npm install prisma@5.22.0
+
+# Copy prisma schema and generated client
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+
+# Copy ALL production node_modules from builder (includes @temporalio, @langchain, etc.)
+COPY --from=builder /app/node_modules ./node_modules
+
 # Copy built artifacts
 COPY --from=builder /app/dist ./dist
+
+# Copy package.json for scripts
 COPY --from=builder /app/package*.json ./
-
-# Install production dependencies only
-RUN npm install --omit=dev
-
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
-USER nodejs
 
 EXPOSE 3000
 
