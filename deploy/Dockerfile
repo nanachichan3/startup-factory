@@ -3,15 +3,15 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 
 # Copy root package files and lockfile for monorepo
-COPY ../package*.json ./
-COPY ../packages/harness/package*.json ../packages/harness/tsconfig.json ./
+COPY package*.json ./
+COPY packages/harness/package*.json packages/harness/tsconfig.json ./
 
 # Install dependencies (use install since lockfile is at root, not in harness)
 RUN npm install
 
 # Copy source and prisma schema
-COPY ../packages/harness/src ./src
-COPY ../packages/harness/prisma ./prisma
+COPY packages/harness/src ./src
+COPY packages/harness/prisma ./prisma
 
 # Build TypeScript
 RUN npm run build
