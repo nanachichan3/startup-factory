@@ -34,15 +34,6 @@ services:
     ports:
       - "7233:7233"
       - "8080:8080"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.tcp.routers.temporal.rule=Host(`temporal.qed.quest`)"
-      - "traefik.tcp.routers.temporal.entrypoints=gRPC"
-      - "traefik.tcp.routers.temporal.tls=true"
-      - "traefik.tcp.services.temporal.loadbalancer.server.port=7233"
-      - "traefik.http.routers.temporal-web.rule=Host(`temporal.qed.quest`)"
-      - "traefik.http.routers.temporal-web.tls=true"
-      - "traefik.http.services.temporal-web.loadbalancer.server.port=8080"
 
 volumes:
   postgres_data:
