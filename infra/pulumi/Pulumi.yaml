@@ -1,0 +1,11 @@
+name: startup-factory-infra
+runtime: nodejs
+description: Startup Factory Infrastructure - Coolify Deployment with Pulumi
+
+config:
+  coolify:
+    apiUrl: https://qed.quest/api/v1
+    apiKey: ${COOLIFY_API_KEY}
+    projectUuid: k8kgkwocskk4k084k0s0ko48
+    environment: production
+    serverUuid: bowowgww8cw08kokogk88oss

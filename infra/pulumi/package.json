@@ -1,0 +1,19 @@
+{
+  "name": "startup-factory-infra",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "type": "module",
+  "scripts": {
+    "up": "pulumi up",
+    "preview": "pulumi preview",
+    "destroy": "pulumi destroy"
+  },
+  "dependencies": {
+    "@pulumi/pulumi": "^3.0.0",
+    "@pulumi/command": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}
