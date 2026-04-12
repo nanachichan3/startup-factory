@@ -1,23 +1,77 @@
+# Mem0 Self-Hosted Deployment
+# Full stack: Mem0 API + PostgreSQL/pgvector + Neo4j
+#
+# Ports exposed:
+#   - Mem0 API: 8888
+#   - PostgreSQL: 5433 (internal: 5432)
+#   - Neo4j: 7475 (http), 7690 (bolt)
+#
+# Required env vars:
+#   - OPENAI_API_KEY (or another supported LLM API key)
+#
+# Usage:
+#   docker compose up -d
+#   Mem0 API: http://localhost:8888
+
 version: '3.8'
 services:
   mem0:
     image: mem0ai/mem0:latest
     ports:
-      - "5010:5000"
+      - "8888:8888"
     environment:
-      - REDIS_URL=redis://redis:6379
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      DATABASE_URL: postgresql://mem0user:mem0pass@postgres:5432/mem0db
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USERNAME: neo4j
+      NEO4J_PASSWORD: mem0neo4j
+    depends_on:
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
     networks:
       - mem0_network
 
-  redis:
-    image: redis:7-alpine
+  postgres:
+    image: ankane/pgvector:latest
+    environment:
+      POSTGRES_USER: mem0user
+      POSTGRES_PASSWORD: mem0pass
+      POSTGRES_DB: mem0db
     ports:
-      - "6380:6379"
+      - "5433:5432"
+    volumes:
+      - pgvector_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mem0user -d mem0db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - mem0_network
+
+  neo4j:
+    image: neo4j:5
+    environment:
+      NEO4J_AUTH: neo4j/mem0neo4j
+      NEO4J_PLUGINS: '["apoc"]'
+    ports:
+      - "7475:7474"
+      - "7690:7687"
+    volumes:
+      - neo4j_data:/data
+    healthcheck:
+      test: ["CMD", "neo4j", "status"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
     networks:
       - mem0_network
 
 volumes:
-  mem0_data:
+  pgvector_data:
+  neo4j_data:
 
 networks:
   mem0_network:
