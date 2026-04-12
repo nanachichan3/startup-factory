@@ -43,8 +43,8 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/prisma ./prisma
 
 # Create non-root user
-RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
-USER nodejs
+RUN groupadd --gid 1001 appgroup && useradd --uid 1001 --gid appgroup appuser
+USER appuser
 
 EXPOSE 3000
 
