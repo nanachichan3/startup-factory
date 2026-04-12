@@ -45,7 +45,7 @@ services:
       retries: 10
 
   neo4j:
-    image: neo4j:5.23.0
+    image: neo4j:5.16.0
     container_name: factory-mem0-neo4j
     restart: unless-stopped
     environment:
