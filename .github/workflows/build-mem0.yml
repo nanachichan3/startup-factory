@@ -12,6 +12,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
+      - name: Clone Mem0 source
+        run: git clone --depth=1 https://github.com/mem0ai/mem0.git ./mem0-source
+      
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       
@@ -25,7 +28,7 @@ jobs:
       - name: Build and push linux/amd64 image
         uses: docker/build-push-action@v5
         with:
-          context: ./mem0/server
+          context: ./mem0-source/server
           push: true
           tags: ghcr.io/nanachichan3/mem0:latest
           platforms: linux/amd64
