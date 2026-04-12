@@ -36,7 +36,7 @@
   },
   "dependencies": {
     "@types/express": "^5.0.6",
-    "discord.js": "^14.26.2",
+    "discord.js": "^14.15.3",
     "express": "^5.2.1",
     "mem0ai": "^2.4.6"
   }

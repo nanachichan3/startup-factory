@@ -100,7 +100,7 @@ export async function listTasks(req: Request, res: Response): Promise<void> {
          "createdAt" DESC`
     );
 
-    res.json({ tasks, count: tasks.length });
+    res.json({ tasks: tasks as any[], count: (tasks as any[]).length });
   } catch (error: any) {
     console.error('[Tasks] List error:', error);
     res.status(500).json({ error: error.message });
@@ -120,12 +120,12 @@ export async function getTask(req: Request, res: Response): Promise<void> {
       id
     );
 
-    if (!task || task.length === 0) {
+    if (!task || (task as any[]).length === 0) {
       res.status(404).json({ error: 'Task not found' });
       return;
     }
 
-    res.json({ task: task[0] });
+    res.json({ task: (task as any[])[0] });
   } catch (error: any) {
     console.error('[Tasks] Get error:', error);
     res.status(500).json({ error: error.message });
@@ -167,12 +167,12 @@ export async function updateTask(req: Request, res: Response): Promise<void> {
       ...values
     );
 
-    if (!result || result.length === 0) {
+    if (!result || (result as any[]).length === 0) {
       res.status(404).json({ error: 'Task not found' });
       return;
     }
 
-    res.json({ task: result[0] });
+    res.json({ task: (result as any[])[0] });
   } catch (error: any) {
     console.error('[Tasks] Update error:', error);
     res.status(500).json({ error: error.message });
