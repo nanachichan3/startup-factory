@@ -15,10 +15,11 @@ jobs:
       - name: Clone Mem0 source
         run: git clone --depth=1 https://github.com/mem0ai/mem0.git ./mem0-source
       
-      - name: Add psycopg, langchain-neo4j, and init dir
+      - name: Add all deps and init dir
         run: |
           echo "psycopg[binary]>=3.2.0" >> ./mem0-source/server/requirements.txt
           echo "langchain-neo4j" >> ./mem0-source/server/requirements.txt
+          echo "rank-bm25" >> ./mem0-source/server/requirements.txt
           sed -i 's|^(RUN pip install.*)$|RUN apt-get update \&\& apt-get install -y libpq-dev \&\& pip install --no-cache-dir -r requirements.txt \&\& mkdir -p /data|' ./mem0-source/server/Dockerfile
       
       - name: Set up Docker Buildx
@@ -36,6 +37,6 @@ jobs:
         with:
           context: ./mem0-source/server
           push: true
-          tags: ghcr.io/nanachichan3/mem0:v4
+          tags: ghcr.io/nanachichan3/mem0:v5
           platforms: linux/amd64
           no-cache: true
