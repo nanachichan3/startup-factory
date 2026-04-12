@@ -263,7 +263,9 @@ export async function initializeDatabase(): Promise<void> {
 
     // Seed sample startups (only if none exist)
     const existingStartups = await prisma.$queryRawUnsafe<{ count: bigint }[]>(`SELECT COUNT(*) as count FROM "startups"`);
-    if (existingStartups[0]?.count === BigInt(0)) {
+    const startupCount = Number(existingStartups[0]?.count ?? 0);
+    console.log('[DB] Current startups count:', startupCount);
+    if (startupCount === 0) {
       await prisma.$executeRawUnsafe(`
         INSERT INTO "startups" (id, name, description, "founderBrief", stage, "createdAt", "updatedAt")
         VALUES 
@@ -277,7 +279,9 @@ export async function initializeDatabase(): Promise<void> {
 
     // Seed sample tasks (only if none exist)
     const existingTasks = await prisma.$queryRawUnsafe<{ count: bigint }[]>(`SELECT COUNT(*) as count FROM "tasks"`);
-    if (existingTasks[0]?.count === BigInt(0)) {
+    const taskCount = Number(existingTasks[0]?.count ?? 0);
+    console.log('[DB] Current tasks count:', taskCount);
+    if (taskCount === 0) {
       await prisma.$executeRawUnsafe(`
         INSERT INTO "tasks" (id, title, description, priority, status, assignee, phase, "estimateMinutes", "createdAt", "updatedAt")
         VALUES 

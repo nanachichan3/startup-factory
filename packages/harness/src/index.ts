@@ -6,6 +6,7 @@ import { A2AProtocolHandler, createA2AHandler } from './protocol/a2a-handler.js'
 import { TemporalCloudProvider, temporalCloud } from './temporal/cloud.js';
 import { execSync } from 'child_process';
 import app from './api/server.js';
+import { initializeDatabase } from './db/client.js';
 
 const TEMPORAL_ADDRESS = process.env.TEMPORAL_ADDRESS || 'localhost:7233';
 const TEMPORAL_NAMESPACE = process.env.TEMPORAL_NAMESPACE || 'default';
@@ -61,6 +62,10 @@ class StartupFactoryHarness {
         env: { ...process.env },
       });
       console.log('[Harness] Database schema sync complete');
+
+      // Initialize database with seed data
+      console.log('[Harness] Initializing database with seed data...');
+      await initializeDatabase();
     } catch (error: any) {
       const msg = error.stderr?.toString() || error.message || '';
       if (msg.includes('already in sync') || msg.includes('has not changed')) {
