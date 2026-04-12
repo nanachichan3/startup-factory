@@ -1,6 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import { createStartup, getStartup, listStartups, updateStartupStage, executeWorkflow, healthCheck } from './routes/startups.js';
 import { getDashboard } from './routes/dashboard.js';
+import { getDebugDb } from './routes/debug.js';
 
 const app = express();
 
@@ -42,6 +43,7 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 
 // Public routes
 app.get('/health', healthCheck);
+app.get('/debug/db', getDebugDb);
 
 // Protected dashboard
 app.get('/dashboard', basicAuth, getDashboard);
