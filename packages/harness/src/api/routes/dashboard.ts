@@ -143,41 +143,43 @@ export async function getDashboardSummary(req: Request, res: Response): Promise<
   const dbHealthy = await isDatabaseHealthy();
   const isDemo = !dbHealthy || !prisma;
   
-  try {
-    if (isDemo || !prisma) {
+  // Check if we can query the DB without errors (tables might not exist)
+  if (!isDemo && prisma) {
+    try {
+      const [agentCount, activeAgentCount, startupCount, recentEvents, messageCount] = await Promise.all([
+        prisma.agent.count(),
+        prisma.agent.count({ where: { status: 'active' } }),
+        prisma.startup.count(),
+        prisma.lifecycleEvent.count({ where: { createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } } }),
+        prisma.agentMessage.count({ where: { createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } } })
+      ]);
+
       res.json({
-        totalAgents: demoAgents.length,
-        activeAgents: demoAgents.filter(a => a.status === 'active').length,
-        totalStartups: demoStartups.length,
-        pendingInputs: demoPendingInputs.length,
-        activeSessions: demoSessions.filter(s => s.status === 'active').length,
-        mode: 'demo',
-        dbHealthy: false
+        totalAgents: agentCount,
+        activeAgents: activeAgentCount,
+        totalStartups: startupCount,
+        pendingInputs: recentEvents,
+        activeSessions: messageCount > 0 ? Math.ceil(messageCount / 10) : 0,
+        mode: 'production',
+        dbHealthy: true
       });
       return;
+    } catch (error: any) {
+      // Tables don't exist or other DB error — fall through to demo mode
+      console.warn('[Dashboard API] DB query failed, using demo data:', error.message?.substring(0, 100));
     }
-
-    const [agentCount, activeAgentCount, startupCount, recentEvents, messageCount] = await Promise.all([
-      prisma.agent.count(),
-      prisma.agent.count({ where: { status: 'active' } }),
-      prisma.startup.count(),
-      prisma.lifecycleEvent.count({ where: { createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } } }),
-      prisma.agentMessage.count({ where: { createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } } })
-    ]);
-
-    res.json({
-      totalAgents: agentCount,
-      activeAgents: activeAgentCount,
-      totalStartups: startupCount,
-      pendingInputs: recentEvents,
-      activeSessions: messageCount > 0 ? Math.ceil(messageCount / 10) : 0,
-      mode: 'production',
-      dbHealthy: true
-    });
-  } catch (error) {
-    console.error('[Dashboard API] Error fetching summary:', error);
-    res.status(500).json({ error: 'Failed to fetch dashboard summary' });
   }
+  
+  // Fallback to demo data
+  res.json({
+    totalAgents: demoAgents.length,
+    activeAgents: demoAgents.filter(a => a.status === 'active').length,
+    totalStartups: demoStartups.length,
+    pendingInputs: demoPendingInputs.length,
+    activeSessions: demoSessions.filter(s => s.status === 'active').length,
+    mode: 'demo',
+    dbHealthy: false
+  });
 }
 
 /**
@@ -188,12 +190,12 @@ export async function getDashboardAgents(req: Request, res: Response): Promise<v
   const dbHealthy = await isDatabaseHealthy();
   const isDemo = !dbHealthy || !prisma;
   
+  if (isDemo || !prisma) {
+    res.json({ agents: demoAgents, mode: 'demo' });
+    return;
+  }
+  
   try {
-    if (isDemo || !prisma) {
-      res.json({ agents: demoAgents, mode: 'demo' });
-      return;
-    }
-
     const agents = await prisma.agent.findMany({
       orderBy: { updatedAt: 'desc' }
     });
@@ -208,9 +210,9 @@ export async function getDashboardAgents(req: Request, res: Response): Promise<v
       })),
       mode: 'production'
     });
-  } catch (error) {
-    console.error('[Dashboard API] Error fetching agents:', error);
-    res.status(500).json({ error: 'Failed to fetch agents' });
+  } catch (error: any) {
+    console.warn('[Dashboard API] DB query failed, using demo data:', error.message?.substring(0, 100));
+    res.json({ agents: demoAgents, mode: 'demo' });
   }
 }
 
