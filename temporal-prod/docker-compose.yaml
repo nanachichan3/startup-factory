@@ -15,6 +15,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    ports:
+      - "5433:5432"
 
   temporal:
     image: temporalio/auto-setup:1.25.0
@@ -33,6 +35,23 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+
+  factory:
+    image: ghcr.io/nanachichan3/startup-factory:latest
+    container_name: factory-api
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - TEMPORAL_ADDRESS=factory-temporal:7233
+      - TEMPORAL_NAMESPACE=default
+    depends_on:
+      - temporal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.factory.rule=Host(`startup-factory.qed.quest`)"
+      - "traefik.http.services.factory.loadbalancer.server.port=3000"
+      - "traefik.http.routers.factory.tls=true"
+      - "traefik.http.routers.factory.tls.certresolver=letsencrypt"
 
 volumes:
   postgres_data:
