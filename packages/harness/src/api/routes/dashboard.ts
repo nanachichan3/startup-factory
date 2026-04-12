@@ -66,7 +66,7 @@ export async function getDashboard(req: Request, res: Response): Promise<void> {
         })
       ]);
       
-      agents = dbAgents.map((a) => ({
+      agents = dbAgents.map((a: typeof dbAgents[number]) => ({
         id: a.id,
         name: a.displayName || a.name,
         status: a.status || 'inactive',
@@ -74,7 +74,7 @@ export async function getDashboard(req: Request, res: Response): Promise<void> {
         sessions: 0 // Will be populated from session tracking
       }));
       
-      startups = dbStartups.map((s) => ({
+      startups = dbStartups.map((s: typeof dbStartups[number]) => ({
         id: s.id,
         name: s.name,
         stage: s.stage?.toLowerCase() || 'idea',
@@ -85,8 +85,8 @@ export async function getDashboard(req: Request, res: Response): Promise<void> {
       }));
       
       pendingInputs = dbLifecycleEvents
-        .filter((e) => ['stage_advance', 'workflow_start', 'input_required'].includes(e.eventType))
-        .map((e) => {
+        .filter((e: typeof dbLifecycleEvents[number]) => ['stage_advance', 'workflow_start', 'input_required'].includes(e.eventType))
+        .map((e: typeof dbLifecycleEvents[number]) => {
           const metadata = e.metadata as Record<string, any> | null;
           return {
             id: e.id,
@@ -199,7 +199,7 @@ export async function getDashboardAgents(req: Request, res: Response): Promise<v
     });
 
     res.json({ 
-      agents: agents.map(a => ({
+      agents: agents.map((a: typeof agents[number]) => ({
         id: a.id,
         name: a.displayName || a.name,
         status: a.status || 'inactive',
@@ -240,7 +240,7 @@ export async function getDashboardStartups(req: Request, res: Response): Promise
     });
 
     res.json({
-      startups: startups.map(s => {
+      startups: startups.map((s: typeof startups[number]) => {
         const lastEvent = s.lifecycleEvents[0];
         const needsYevInput = lastEvent?.eventType === 'input_required' || 
           (lastEvent?.metadata && typeof lastEvent.metadata === 'object' && 'needsYevInput' in lastEvent.metadata);
