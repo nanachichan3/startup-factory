@@ -15,8 +15,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    networks:
-      - mem0-net
 
   postgres:
     image: ankane/pgvector:latest
@@ -33,13 +31,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-    networks:
-      - mem0-net
 
 volumes:
   mem0_pgdata:
-
-networks:
-  mem0-net:
-    name: mem0-net
-    driver: bridge
