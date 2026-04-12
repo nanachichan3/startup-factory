@@ -1,16 +1,16 @@
 import express, { Request, Response, NextFunction } from 'express';
 import { createStartup, getStartup, listStartups, updateStartupStage, executeWorkflow, healthCheck } from './routes/startups.js';
-import { getDashboard } from './routes/dashboard.js';
+import { getDashboard, getDashboardSummary, getDashboardAgents, getDashboardStartups, getDashboardSessions } from './routes/dashboard.js';
 import { getDebugDb } from './routes/debug.js';
 
 const app = express();
 
-// Get auth credentials from environment
-const AUTH_USER = process.env.HTTP_BASIC_AUTH_USER || 'admin';
-const AUTH_PASS = process.env.HTTP_BASIC_AUTH_PASS || 'password';
+// Get dashboard auth credentials from environment
+const DASHBOARD_USER = process.env.DASHBOARD_USER || 'admin';
+const DASHBOARD_PASS = process.env.DASHBOARD_PASS || 'password';
 
-// Basic auth middleware
-function basicAuth(req: Request, res: Response, next: NextFunction) {
+// Basic auth middleware for dashboard
+function dashboardAuth(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
   
   if (!authHeader || !authHeader.startsWith('Basic ')) {
@@ -23,7 +23,7 @@ function basicAuth(req: Request, res: Response, next: NextFunction) {
   const credentials = Buffer.from(base64Credentials, 'base64').toString('utf8');
   const [user, password] = credentials.split(':');
   
-  if (user === AUTH_USER && password === AUTH_PASS) {
+  if (user === DASHBOARD_USER && password === DASHBOARD_PASS) {
     next();
   } else {
     res.setHeader('WWW-Authenticate', 'Basic realm="Startup Factory Dashboard"');
@@ -45,15 +45,19 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 app.get('/health', healthCheck);
 app.get('/debug/db', getDebugDb);
 
-// Protected dashboard
-app.get('/dashboard', basicAuth, getDashboard);
+// Protected dashboard routes
+app.get('/dashboard', dashboardAuth, getDashboard);
+app.get('/api/dashboard/summary', dashboardAuth, getDashboardSummary);
+app.get('/api/dashboard/agents', dashboardAuth, getDashboardAgents);
+app.get('/api/dashboard/startups', dashboardAuth, getDashboardStartups);
+app.get('/api/dashboard/sessions', dashboardAuth, getDashboardSessions);
 
 // Protected API routes
-app.post('/api/startups', basicAuth, createStartup);
-app.get('/api/startups', basicAuth, listStartups);
-app.get('/api/startups/:id', basicAuth, getStartup);
-app.put('/api/startups/:id/stage', basicAuth, updateStartupStage);
-app.post('/api/startups/:id/execute', basicAuth, executeWorkflow);
+app.post('/api/startups', dashboardAuth, createStartup);
+app.get('/api/startups', dashboardAuth, listStartups);
+app.get('/api/startups/:id', dashboardAuth, getStartup);
+app.put('/api/startups/:id/stage', dashboardAuth, updateStartupStage);
+app.post('/api/startups/:id/execute', dashboardAuth, executeWorkflow);
 
 // Error handler
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {

@@ -9,15 +9,26 @@ const demoAgents = [
 ];
 
 const demoStartups = [
-  { id: 'startup-1', name: 'AI Code Review Assistant', stage: 'validation', progress: 25, founderBrief: 'Yev Rachkovan', lastActivity: new Date().toISOString() },
-  { id: 'startup-2', name: 'DnDate', stage: 'launch', progress: 75, founderBrief: 'Yev Rachkovan', lastActivity: new Date(Date.now() - 86400000).toISOString() },
-  { id: 'startup-3', name: 'Self-Degree Framework', stage: 'idea', progress: 10, founderBrief: 'Yev Rachkovan', lastActivity: new Date(Date.now() - 172800000).toISOString() },
+  { id: 'startup-1', name: 'AI Code Review Assistant', stage: 'validation', progress: 25, founderBrief: 'Yev Rachkovan', lastActivity: new Date().toISOString(), needsYevInput: true },
+  { id: 'startup-2', name: 'DnDate', stage: 'launch', progress: 75, founderBrief: 'Yev Rachkovan', lastActivity: new Date(Date.now() - 86400000).toISOString(), needsYevInput: false },
+  { id: 'startup-3', name: 'Self-Degree Framework', stage: 'idea', progress: 10, founderBrief: 'Yev Rachkovan', lastActivity: new Date(Date.now() - 172800000).toISOString(), needsYevInput: true },
 ];
 
 const demoPendingInputs = [
   { id: 'pi-1', startupId: 'startup-1', type: 'decision', message: 'Validate market need for AI code review tool', priority: 'high', createdAt: new Date().toISOString() },
   { id: 'pi-2', startupId: 'startup-2', type: 'review', message: 'Review onboarding flow UX design', priority: 'medium', createdAt: new Date(Date.now() - 3600000).toISOString() },
 ];
+
+const demoSessions = [
+  { id: 'session-1', agentId: 'ceo', startedAt: new Date(Date.now() - 3600000).toISOString(), status: 'active', messages: 42 },
+  { id: 'session-2', agentId: 'cto', startedAt: new Date(Date.now() - 7200000).toISOString(), status: 'active', messages: 128 },
+  { id: 'session-3', agentId: 'ceo', startedAt: new Date(Date.now() - 86400000).toISOString(), status: 'completed', messages: 89 },
+];
+
+function getStageProgress(stage: string): number {
+  const stageOrder = ['idea', 'validation', 'mvp', 'launch', 'distribution', 'pmf', 'support', 'exit'];
+  return Math.round(((stageOrder.indexOf(stage) + 1) / stageOrder.length) * 100);
+}
 
 /**
  * GET /dashboard
@@ -33,51 +44,76 @@ export async function getDashboard(req: Request, res: Response): Promise<void> {
   let agents = demoAgents;
   let startups = demoStartups;
   let pendingInputs = demoPendingInputs;
+  let sessions = demoSessions;
   
   // Try to fetch real data from database
   if (!isDemo && prisma) {
     try {
-      const [dbAgents, dbStartups, dbLifecycleEvents] = await Promise.all([
+      const [dbAgents, dbStartups, dbLifecycleEvents, dbMessages] = await Promise.all([
         prisma.agent.findMany({ orderBy: { updatedAt: 'desc' } }),
         prisma.startup.findMany({ 
           orderBy: { updatedAt: 'desc' },
           include: { _count: { select: { lifecycleEvents: true } } }
         }),
-        // Get recent lifecycle events as "pending inputs"
         prisma.lifecycleEvent.findMany({ 
           orderBy: { createdAt: 'desc' },
-          take: 10,
+          take: 20,
           include: { startup: true }
+        }),
+        prisma.agentMessage.findMany({
+          orderBy: { createdAt: 'desc' },
+          take: 100
         })
       ]);
       
-      agents = dbAgents.map((a: { id: string; name: string; status: string; role: string }) => ({
+      agents = dbAgents.map((a) => ({
         id: a.id,
-        name: a.name,
+        name: a.displayName || a.name,
         status: a.status || 'inactive',
         role: a.role || 'Unknown',
-        sessions: 0
+        sessions: 0 // Will be populated from session tracking
       }));
       
-      startups = dbStartups.map((s: { id: string; name: string; stage: string; founderBrief: string; updatedAt: Date }) => ({
+      startups = dbStartups.map((s) => ({
         id: s.id,
         name: s.name,
-        stage: s.stage,
-        progress: getStageProgress(s.stage),
+        stage: s.stage?.toLowerCase() || 'idea',
+        progress: getStageProgress(s.stage?.toLowerCase() || 'idea'),
         founderBrief: s.founderBrief || '',
-        lastActivity: s.updatedAt.toISOString()
+        lastActivity: s.updatedAt.toISOString(),
+        needsYevInput: false // Default, can be enhanced with additional queries
       }));
       
       pendingInputs = dbLifecycleEvents
-        .filter((e: { eventType: string }) => ['stage_advance', 'workflow_start', 'input_required'].includes(e.eventType))
-        .map((e: { id: string; startupId: string; eventType: string; metadata: any; createdAt: Date; startup: any }) => ({
-          id: e.id,
-          startupId: e.startupId,
-          type: e.eventType,
-          message: e.metadata?.message || `Event: ${e.eventType}`,
-          priority: e.metadata?.priority || 'medium',
-          createdAt: e.createdAt.toISOString()
-        }));
+        .filter((e) => ['stage_advance', 'workflow_start', 'input_required'].includes(e.eventType))
+        .map((e) => {
+          const metadata = e.metadata as Record<string, any> | null;
+          return {
+            id: e.id,
+            startupId: e.startupId,
+            type: e.eventType,
+            message: metadata?.message || `Event: ${e.eventType}`,
+            priority: metadata?.priority || 'medium',
+            createdAt: e.createdAt.toISOString()
+          };
+        });
+      
+      // Derive sessions from message activity
+      const messageCountByAgent: Record<string, number> = {};
+      for (const msg of dbMessages) {
+        messageCountByAgent[msg.senderId] = (messageCountByAgent[msg.senderId] || 0) + 1;
+      }
+      for (const agent of agents) {
+        agent.sessions = messageCountByAgent[agent.id] || 0;
+      }
+      
+      sessions = Object.entries(messageCountByAgent).map(([agentId, messageCount], idx) => ({
+        id: `session-${idx + 1}`,
+        agentId,
+        startedAt: new Date().toISOString(),
+        status: 'active',
+        messages: messageCount
+      }));
       
     } catch (error) {
       console.error('[Dashboard] Error fetching from DB:', error);
@@ -89,6 +125,7 @@ export async function getDashboard(req: Request, res: Response): Promise<void> {
     agents,
     startups,
     pendingInputs,
+    sessions,
     isDemo,
     dbHealthy,
     timestamp: new Date().toISOString()
@@ -98,15 +135,191 @@ export async function getDashboard(req: Request, res: Response): Promise<void> {
   res.send(html);
 }
 
-function getStageProgress(stage: string): number {
-  const stages = ['idea', 'validation', 'mvp', 'launch', 'distribution', 'pmf', 'support', 'exit'];
-  return Math.round(((stages.indexOf(stage) + 1) / stages.length) * 100);
+/**
+ * GET /api/dashboard/summary
+ * Returns dashboard summary statistics
+ */
+export async function getDashboardSummary(req: Request, res: Response): Promise<void> {
+  const dbHealthy = await isDatabaseHealthy();
+  const isDemo = !dbHealthy || !prisma;
+  
+  try {
+    if (isDemo || !prisma) {
+      res.json({
+        totalAgents: demoAgents.length,
+        activeAgents: demoAgents.filter(a => a.status === 'active').length,
+        totalStartups: demoStartups.length,
+        pendingInputs: demoPendingInputs.length,
+        activeSessions: demoSessions.filter(s => s.status === 'active').length,
+        mode: 'demo',
+        dbHealthy: false
+      });
+      return;
+    }
+
+    const [agentCount, activeAgentCount, startupCount, recentEvents, messageCount] = await Promise.all([
+      prisma.agent.count(),
+      prisma.agent.count({ where: { status: 'active' } }),
+      prisma.startup.count(),
+      prisma.lifecycleEvent.count({ where: { createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } } }),
+      prisma.agentMessage.count({ where: { createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } } })
+    ]);
+
+    res.json({
+      totalAgents: agentCount,
+      activeAgents: activeAgentCount,
+      totalStartups: startupCount,
+      pendingInputs: recentEvents,
+      activeSessions: messageCount > 0 ? Math.ceil(messageCount / 10) : 0,
+      mode: 'production',
+      dbHealthy: true
+    });
+  } catch (error) {
+    console.error('[Dashboard API] Error fetching summary:', error);
+    res.status(500).json({ error: 'Failed to fetch dashboard summary' });
+  }
+}
+
+/**
+ * GET /api/dashboard/agents
+ * Returns list of agents with their status
+ */
+export async function getDashboardAgents(req: Request, res: Response): Promise<void> {
+  const dbHealthy = await isDatabaseHealthy();
+  const isDemo = !dbHealthy || !prisma;
+  
+  try {
+    if (isDemo || !prisma) {
+      res.json({ agents: demoAgents, mode: 'demo' });
+      return;
+    }
+
+    const agents = await prisma.agent.findMany({
+      orderBy: { updatedAt: 'desc' }
+    });
+
+    res.json({ 
+      agents: agents.map(a => ({
+        id: a.id,
+        name: a.displayName || a.name,
+        status: a.status || 'inactive',
+        role: a.role || 'Unknown',
+        sessions: 0
+      })),
+      mode: 'production'
+    });
+  } catch (error) {
+    console.error('[Dashboard API] Error fetching agents:', error);
+    res.status(500).json({ error: 'Failed to fetch agents' });
+  }
+}
+
+/**
+ * GET /api/dashboard/startups
+ * Returns startups with stage, progress, and Yev input needed flag
+ */
+export async function getDashboardStartups(req: Request, res: Response): Promise<void> {
+  const dbHealthy = await isDatabaseHealthy();
+  const isDemo = !dbHealthy || !prisma;
+  
+  try {
+    if (isDemo || !prisma) {
+      res.json({ startups: demoStartups, mode: 'demo' });
+      return;
+    }
+
+    const startups = await prisma.startup.findMany({
+      orderBy: { updatedAt: 'desc' },
+      include: {
+        _count: { select: { lifecycleEvents: true, artifacts: true } },
+        lifecycleEvents: {
+          orderBy: { createdAt: 'desc' },
+          take: 1
+        }
+      }
+    });
+
+    res.json({
+      startups: startups.map(s => {
+        const lastEvent = s.lifecycleEvents[0];
+        const needsYevInput = lastEvent?.eventType === 'input_required' || 
+          (lastEvent?.metadata && typeof lastEvent.metadata === 'object' && 'needsYevInput' in lastEvent.metadata);
+        
+        return {
+          id: s.id,
+          name: s.name,
+          stage: s.stage?.toLowerCase() || 'idea',
+          progress: getStageProgress(s.stage?.toLowerCase() || 'idea'),
+          founderBrief: s.founderBrief || '',
+          lastActivity: s.updatedAt.toISOString(),
+          needsYevInput: needsYevInput || false,
+          eventCount: s._count.lifecycleEvents,
+          artifactCount: s._count.artifacts
+        };
+      }),
+      mode: 'production'
+    });
+  } catch (error) {
+    console.error('[Dashboard API] Error fetching startups:', error);
+    res.status(500).json({ error: 'Failed to fetch startups' });
+  }
+}
+
+/**
+ * GET /api/dashboard/sessions
+ * Returns active sessions (derived from recent message activity)
+ */
+export async function getDashboardSessions(req: Request, res: Response): Promise<void> {
+  const dbHealthy = await isDatabaseHealthy();
+  const isDemo = !dbHealthy || !prisma;
+  
+  try {
+    if (isDemo || !prisma) {
+      res.json({ sessions: demoSessions, mode: 'demo' });
+      return;
+    }
+
+    // Get recent messages grouped by agent
+    const recentMessages = await prisma.agentMessage.findMany({
+      where: {
+        createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const messagesByAgent: Record<string, any[]> = {};
+    for (const msg of recentMessages) {
+      if (!messagesByAgent[msg.senderId]) {
+        messagesByAgent[msg.senderId] = [];
+      }
+      messagesByAgent[msg.senderId].push(msg);
+    }
+
+    const sessions = Object.entries(messagesByAgent).map(([agentId, messages], idx) => {
+      const firstMsg = messages[messages.length - 1];
+      const lastMsg = messages[0];
+      return {
+        id: `session-${idx + 1}`,
+        agentId,
+        startedAt: firstMsg?.createdAt.toISOString() || new Date().toISOString(),
+        lastActivity: lastMsg?.createdAt.toISOString() || new Date().toISOString(),
+        status: 'active',
+        messageCount: messages.length
+      };
+    });
+
+    res.json({ sessions, mode: 'production' });
+  } catch (error) {
+    console.error('[Dashboard API] Error fetching sessions:', error);
+    res.status(500).json({ error: 'Failed to fetch sessions' });
+  }
 }
 
 function generateDashboardHTML(data: {
   agents: any[],
   startups: any[],
   pendingInputs: any[],
+  sessions: any[],
   isDemo: boolean,
   dbHealthy: boolean,
   timestamp: string
@@ -178,6 +391,7 @@ function generateDashboardHTML(data: {
     .progress-bar { height: 6px; background: #334155; border-radius: 3px; overflow: hidden; }
     .progress-fill { height: 100%; border-radius: 3px; transition: width 0.3s ease; }
     .progress-label { font-size: 0.75rem; color: #64748b; margin-top: 6px; }
+    .yev-flag { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; background: #ef4444; color: #fff; margin-left: 8px; }
     
     .input-list { display: flex; flex-direction: column; gap: 12px; }
     .input-item { padding: 16px; background: #0f172a; border-radius: 8px; border-left: 3px solid; }
@@ -200,6 +414,9 @@ function generateDashboardHTML(data: {
     .sessions-table th { color: #64748b; font-weight: 500; font-size: 0.8rem; text-transform: uppercase; }
     .sessions-table td { color: #e2e8f0; }
     .sessions-table tr:hover { background: #0f172a; }
+    
+    .refresh-btn { background: #3b82f6; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
+    .refresh-btn:hover { background: #2563eb; }
   </style>
 </head>
 <body>
@@ -209,6 +426,7 @@ function generateDashboardHTML(data: {
       Last updated: ${data.timestamp}
       <span class="badge ${data.isDemo ? 'badge-demo' : 'badge-prod'}">${data.isDemo ? 'DEMO MODE' : 'PRODUCTION'}</span>
       <span class="badge ${data.dbHealthy ? 'badge-db' : 'badge-db-down'}">DB: ${data.dbHealthy ? 'Connected' : 'Disconnected'}</span>
+      <button class="refresh-btn" onclick="location.reload()">🔄 Refresh</button>
     </p>
     
     <div class="grid">
@@ -244,7 +462,7 @@ function generateDashboardHTML(data: {
           ${data.startups.map(startup => `
             <div class="startup-item">
               <div class="startup-header">
-                <span class="startup-name">${startup.name}</span>
+                <span class="startup-name">${startup.name}${startup.needsYevInput ? '<span class="yev-flag">⚠️ YEV INPUT</span>' : ''}</span>
                 <span class="stage-badge" style="background: ${stageColors[startup.stage] || '#6b7280'}">${stageLabels[startup.stage] || startup.stage}</span>
               </div>
               <div class="progress-bar">
@@ -275,6 +493,36 @@ function generateDashboardHTML(data: {
           `).join('')}
         </div>
       </div>
+    </div>
+    
+    <!-- Sessions Table -->
+    <div class="card full-width">
+      <div class="card-header">
+        <span class="card-title">💬 Active Sessions</span>
+        <span class="badge badge-db">${data.sessions.filter(s => s.status === 'active').length} Active</span>
+      </div>
+      <table class="sessions-table">
+        <thead>
+          <tr>
+            <th>Session ID</th>
+            <th>Agent</th>
+            <th>Started At</th>
+            <th>Messages</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.sessions.map(session => `
+            <tr>
+              <td>${session.id}</td>
+              <td>${session.agentId}</td>
+              <td>${new Date(session.startedAt).toLocaleString()}</td>
+              <td>${session.messages || session.messageCount || 0}</td>
+              <td><span class="badge ${session.status === 'active' ? 'badge-prod' : 'badge-db-down'}">${session.status}</span></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
     </div>
   </div>
 </body>
