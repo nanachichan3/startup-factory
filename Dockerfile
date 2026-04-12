@@ -1,11 +1,16 @@
 # Multi-stage build for Startup Factory Harness
-FROM node:22-alpine AS builder
+FROM node:20-bullseye AS builder
 
 WORKDIR /app
 
+# Install build dependencies
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+
 # Copy only the harness package files (no monorepo root needed)
 COPY packages/harness/package.json ./
-RUN npm install
+
+# Install dependencies (including dev for build)
+RUN npm ci
 
 # Copy all source code
 COPY packages/harness/src ./src
@@ -19,13 +24,18 @@ RUN npx tsc
 RUN npx prisma generate --schema=./prisma/schema.prisma
 
 # Production stage
-FROM node:22-alpine
+FROM node:20-bullseye
 
 WORKDIR /app
 
+# Install runtime dependencies for Prisma
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+
 # Copy only package files needed for production
 COPY packages/harness/package.json ./
-RUN npm install --omit=dev
+
+# Install production dependencies only
+RUN npm ci --production || npm install --omit=dev
 
 # Copy built artifacts from builder
 COPY --from=builder /app/dist ./dist
