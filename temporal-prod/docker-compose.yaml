@@ -30,7 +30,7 @@ services:
       - DB_PORT=5432
       - POSTGRES_USER=temporal
       - POSTGRES_PWD=temporal123
-      - POSTGRES_SEEDS=factory-postgres
+      - POSTGRES_SEEDS=postgres
       - POSTGRES_DB=temporal
     depends_on:
       postgres:
