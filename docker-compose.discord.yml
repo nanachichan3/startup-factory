@@ -12,10 +12,4 @@ services:
       - FACTORY_API_URL=${FACTORY_API_URL:-http://factory-api:3000}
       - DASHBOARD_USER=${DASHBOARD_USER:-admin}
       - DASHBOARD_PASS=${DASHBOARD_PASS:-factory2026}
-    networks:
-      - factory-network
-
-networks:
-  factory-network:
-    external: true
-    name: factory-network
+    # No explicit network - Coolify will connect to 'coolify' network automatically
