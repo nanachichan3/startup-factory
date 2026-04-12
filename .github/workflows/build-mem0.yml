@@ -9,8 +9,6 @@ jobs:
     permissions:
       packages: write
       contents: read
-    env:
-      NEO4J_URI: ""
     steps:
       - uses: actions/checkout@v4
       
@@ -38,7 +36,5 @@ jobs:
           push: true
           tags: ghcr.io/nanachichan3/mem0:v6
           platforms: linux/amd64
-          build-args: |
-            NEO4J_URI=
           cache-from: type=gha
           cache-to: type=gha,mode=max
