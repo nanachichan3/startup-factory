@@ -15,9 +15,14 @@ jobs:
       - name: Clone Mem0 source
         run: git clone --depth=1 https://github.com/mem0ai/mem0.git ./mem0-source
       
-      - name: Patch Dockerfile for pgvector support
+      - name: Patch requirements and Dockerfile for pgvector
         run: |
-          sed -i 's/RUN pip install --no-cache-dir -r requirements.txt/RUN pip install --no-cache-dir -r requirements.txt psycopg[binary]/' ./mem0-source/server/Dockerfile
+          # Add psycopg to requirements.txt if not present
+          if ! grep -q "psycopg" ./mem0-source/server/requirements.txt; then
+            echo "psycopg[binary]>=3.2.0" >> ./mem0-source/server/requirements.txt
+          fi
+          # Install libpq dev for psycopg binary
+          sed -i 's|RUN pip install --no-cache-dir -r requirements.txt|RUN apt-get update && apt-get install -y libpq-dev && pip install --no-cache-dir -r requirements.txt|' ./mem0-source/server/Dockerfile
       
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
