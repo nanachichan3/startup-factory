@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  discord-gateway:
+    build:
+      context: ./packages/discord-gateway
+      dockerfile: Dockerfile
+    container_name: startup-factory-discord
+    restart: unless-stopped
+    environment:
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
+      - FACTORY_API_URL=${FACTORY_API_URL:-http://factory-api:3000}
+      - DASHBOARD_USER=${DASHBOARD_USER:-admin}
+      - DASHBOARD_PASS=${DASHBOARD_PASS:-factory2026}
+    networks:
+      - factory-network
+
+networks:
+  factory-network:
+    external: true
+    name: factory-network
