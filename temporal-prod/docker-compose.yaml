@@ -55,8 +55,8 @@ services:
       - TEMPORAL_NAMESPACE=default
       # Use local factory-postgres on the same compose network
       - DATABASE_URL=postgres://temporal:temporal123@postgres:5432/temporal
-      - HTTP_BASIC_AUTH_USER=admin
-      - HTTP_BASIC_AUTH_PASS=factory2026
+      - DASHBOARD_USER=admin
+      - DASHBOARD_PASS=factory2026
     depends_on:
       - temporal
     labels:
