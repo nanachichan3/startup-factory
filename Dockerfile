@@ -4,16 +4,15 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 
 # Copy only the harness package files (no monorepo root needed)
-COPY packages/harness/package.json packages/harness/package-lock.json* ./
-
-# Install dependencies (including dev for build)
-RUN npm ci
+COPY packages/harness/package.json ./
+RUN npm install
 
 # Copy all source code
 COPY packages/harness/src ./src
 COPY packages/harness/prisma ./prisma
+COPY packages/harness/tsconfig.json ./
 
-# Build TypeScript directly (not via npm script to avoid workspace issues)
+# Build TypeScript
 RUN npx tsc
 
 # Generate Prisma client
@@ -25,10 +24,8 @@ FROM node:22-alpine
 WORKDIR /app
 
 # Copy only package files needed for production
-COPY packages/harness/package.json packages/harness/package-lock.json* ./
-
-# Install production dependencies only
-RUN npm ci --production || npm install --omit=dev
+COPY packages/harness/package.json ./
+RUN npm install --omit=dev
 
 # Copy built artifacts from builder
 COPY --from=builder /app/dist ./dist
