@@ -16,7 +16,7 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - temporal-net
+      - coolify
 
   temporal:
     image: temporalio/auto-setup:1.25.0
@@ -33,11 +33,11 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - temporal-net
+      - coolify
 
 volumes:
   postgres_data:
 
 networks:
-  temporal-net:
-    driver: bridge
+  coolify:
+    external: true
