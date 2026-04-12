@@ -7,15 +7,16 @@ declare global {
 }
 
 // Check if DATABASE_URL is configured
-const hasDatabaseUrl = process.env.DATABASE_URL && 
-  !process.env.DATABASE_URL.includes('placeholder') &&
-  (process.env.DATABASE_URL.startsWith('postgresql://') || process.env.DATABASE_URL.startsWith('postgres://'));
+const dbUrl = process.env.DATABASE_URL || '';
+const hasDatabaseUrl = dbUrl && 
+  !dbUrl.includes('placeholder') &&
+  (dbUrl.startsWith('postgresql://') || dbUrl.startsWith('postgres://'));
 
 // Create Prisma client only if DATABASE_URL is valid
 let prisma: PrismaClient | null = null;
 
 if (hasDatabaseUrl) {
-  console.log('[DB] DATABASE_URL configured:', process.env.DATABASE_URL.replace(/:[^:@]+@/, ':****@'));
+  console.log('[DB] DATABASE_URL configured:', dbUrl.replace(/:[^:@]+@/, ':****@'));
   prisma = global.prisma || new PrismaClient({
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error', 'warn'],
   });
