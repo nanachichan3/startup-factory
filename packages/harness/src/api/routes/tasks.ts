@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { prisma } from '../db/client.js';
+import { prisma } from '../../db/client.js';
 
 export async function seedDatabase(req: Request, res: Response): Promise<void> {
   if (!prisma) {
@@ -89,7 +89,7 @@ export async function listTasks(req: Request, res: Response): Promise<void> {
     if (phase) where.phase = String(phase);
     if (priority) where.priority = String(priority);
 
-    const tasks = await prisma.$queryRawUnsafe<any[]>(
+    const tasks = await prisma.$queryRawUnsafe(
       `SELECT * FROM "tasks" WHERE 1=1
        ${status ? ` AND status = '${status}'` : ''}
        ${assignee ? ` AND assignee = '${assignee}'` : ''}
@@ -115,7 +115,7 @@ export async function getTask(req: Request, res: Response): Promise<void> {
 
   try {
     const { id } = req.params;
-    const task = await prisma.$queryRawUnsafe<any[]>(
+    const task = await prisma.$queryRawUnsafe(
       `SELECT * FROM "tasks" WHERE id = $1`,
       id
     );
@@ -162,7 +162,7 @@ export async function updateTask(req: Request, res: Response): Promise<void> {
     updates.push(`"updatedAt" = NOW()`);
     values.push(id);
 
-    const result = await prisma.$queryRawUnsafe<any[]>(
+    const result = await prisma.$queryRawUnsafe(
       `UPDATE "tasks" SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
       ...values
     );

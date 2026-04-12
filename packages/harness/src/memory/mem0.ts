@@ -124,7 +124,7 @@ export async function searchMemories(
       limit,
     });
     console.log(`[Mem0] Found ${results.length} memories for agent ${agentId} query: "${query}"`);
-    return results.map(r => r.memory || r.data?.memory || '').filter(Boolean);
+    return results.map((r: any) => r.memory || r.data?.memory || '').filter(Boolean);
   } catch (error: any) {
     console.error(`[Mem0] Failed to search memories for ${agentId}:`, error?.message || error);
     return [];
@@ -143,7 +143,7 @@ export async function getAllMemories(
 
   try {
     const results = await client.getAll({ user_id: agentId, page_size: limit });
-    return results.map(r => ({
+    return results.map((r: any) => ({
       id: r.id,
       memory: r.memory || r.data?.memory || '',
       created_at: r.created_at || new Date(),

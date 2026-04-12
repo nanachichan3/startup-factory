@@ -53,7 +53,7 @@ export async function startDiscordBot(): Promise<boolean> {
     });
 
     bot.on('messageCreate', handleMessage);
-    bot.on('error', (err) => console.error('[Discord] Bot error:', err));
+    bot.on('error', (err: any) => console.error('[Discord] Bot error:', err));
 
     await bot.login(DISCORD_TOKEN);
     return true;
@@ -224,7 +224,7 @@ async function handleTasks(message: Message): Promise<void> {
     return;
   }
 
-  const runList = runs.map((r, i) => {
+  const runList = runs.map((r: any, i: any) => {
     return `**${i + 1}.** [${r.status}] ${r.type} (startupId: ${r.startupId.slice(0, 8)}...)`;
   }).join('\n');
 
@@ -254,7 +254,7 @@ async function handleStartups(message: Message): Promise<void> {
     return;
   }
 
-  const startupList = startups.map((s, i) => {
+  const startupList = startups.map((s: any, i: any) => {
     const stage = s.stage ?? 'idea';
     return `**${i + 1}.** \`${s.id}\` **${s.name}** — ${stage}`;
   }).join('\n');

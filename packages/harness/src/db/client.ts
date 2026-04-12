@@ -352,7 +352,7 @@ export async function initializeDatabase(): Promise<void> {
       }
       console.log('[DB] Agents upserted (schema already exists)');
     } catch (e2) {
-      console.error('[DB] All DB initialization failed:', error?.message || error, '| Agent upsert also failed:', e2?.message || e2);
+      console.error('[DB] All DB initialization failed:', String(error), '| Agent upsert also failed:', String(e2));
     }
   }
 }
