@@ -82,6 +82,20 @@ Seed all tasks from this file into the Task table
 ```
 **Verification:** GET /metrics returns prometheus format
 
+### Task 1.5: Discord Gateway for Factory Management
+**Timebox:** 30 min
+**Priority:** critical
+```
+1. Build Discord bot in packages/harness/src/bot/discord.ts
+2. Commands: !factory status, tasks, startups, create, execute, help
+3. Bot triggers Temporal workflows via factory API
+4. Wire bot startup into harness initialization
+5. Deploy to Coolify (same container as harness)
+6. Test: Send !factory status from Discord → verify response
+7. Commit + push
+```
+**Verification:** !factory status returns health embed in Discord
+
 ---
 
 ## PHASE 2: Self-Steering Agent System 🤖
