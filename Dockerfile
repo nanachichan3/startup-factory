@@ -7,14 +7,17 @@ WORKDIR /app
 COPY packages/harness/package.json packages/harness/package-lock.json* ./
 
 # Install dependencies (including dev for build)
-RUN npm ci || npm install
+RUN npm ci
 
 # Copy all source code
 COPY packages/harness/src ./src
 COPY packages/harness/prisma ./prisma
 
-# Build TypeScript
-RUN npm run build
+# Build TypeScript directly (not via npm script to avoid workspace issues)
+RUN npx tsc
+
+# Generate Prisma client
+RUN npx prisma generate --schema=./prisma/schema.prisma
 
 # Production stage
 FROM node:22-alpine
