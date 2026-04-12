@@ -2,6 +2,7 @@ import { StateGraph } from '@langchain/langgraph';
 import { ChatOpenAI } from '@langchain/openai';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import dotenv from 'dotenv';
+import { searchMemories, addMemories, isMem0Available } from '../memory/mem0.js';
 
 dotenv.config();
 
@@ -155,13 +156,26 @@ async function delegateNode(state: ExpertLoopState): Promise<Partial<ExpertLoopS
   const target = state.delegateTarget || 'cto';
   console.log(`[ExpertLoop:Delegate] Routing to ${target.toUpperCase()} for ${state.projectName}`);
 
+  // Retrieve relevant memories from Mem0 before expert call
+  let memoryContext = '';
+  if (isMem0Available()) {
+    try {
+      const memories = await searchMemories(target, state.currentTask, 3);
+      if (memories.length > 0) {
+        memoryContext = `\n\n[Relevant Context from Memory]\n${memories.map(m => `- ${m}`).join('\n')}\n`;
+        console.log(`[ExpertLoop:Delegate] Retrieved ${memories.length} relevant memories`);
+      }
+    } catch (e) {
+      console.warn('[ExpertLoop:Delegate] Memory search failed:', e);
+    }
+  }
+
   const ctoPrompt = `You are the CTO (Chief Technology Officer) for the Startup Factory.
 Your role is to create technical architecture and MVP specifications.
 
 Project: ${state.projectName}
 Brief: ${state.currentTask}
-Current Stage: ${state.stage}
-
+Current Stage: ${state.stage}${memoryContext}
 Create a comprehensive technical response including:
 1. Tech stack recommendations
 2. System architecture overview
@@ -176,8 +190,7 @@ Your role is to create GTM strategies and content plans.
 
 Project: ${state.projectName}
 Brief: ${state.currentTask}
-Current Stage: ${state.stage}
-
+Current Stage: ${state.stage}${memoryContext}
 Create a comprehensive marketing response including:
 1. Target customer segments
 2. GTM strategy (channels, tactics)
@@ -197,6 +210,18 @@ Be specific and actionable.`;
 
     const content = response.content.toString();
     const artifactType = target === 'cmo' ? 'gtm_strategy' : 'tech_architecture';
+
+    // Store the expert's output as a memory in Mem0
+    if (isMem0Available()) {
+      try {
+        await addMemories(target, [
+          { role: 'user', content: `Task for ${state.projectName}: ${state.currentTask}` },
+          { role: 'assistant', content },
+        ]);
+      } catch (e) {
+        console.warn('[ExpertLoop:Delegate] Memory store failed:', e);
+      }
+    }
 
     return {
       artifacts: {

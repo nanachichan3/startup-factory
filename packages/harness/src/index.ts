@@ -7,6 +7,8 @@ import { TemporalCloudProvider, temporalCloud } from './temporal/cloud.js';
 import { execSync } from 'child_process';
 import app from './api/server.js';
 import { initializeDatabase } from './db/client.js';
+import { initializeMem0, isMem0Available } from './memory/mem0.js';
+import { startDiscordBot, isDiscordBotConnected } from './bot/discord.js';
 
 const TEMPORAL_ADDRESS = process.env.TEMPORAL_ADDRESS || 'localhost:7233';
 const TEMPORAL_NAMESPACE = process.env.TEMPORAL_NAMESPACE || 'default';
@@ -38,6 +40,9 @@ class StartupFactoryHarness {
     // Run database migrations
     await this.runMigrations();
 
+    // Initialize Mem0 for long-term memory
+    const mem0Ready = await initializeMem0();
+
     // Try to connect to Temporal (Cloud or self-hosted)
     await this.initializeTemporal();
 
@@ -47,6 +52,19 @@ class StartupFactoryHarness {
     this.a2aHandlers.set('cmo', createA2AHandler('cmo'));
 
     console.log('[Harness] A2A handlers initialized for CEO, CTO, CMO');
+    if (mem0Ready) {
+      console.log('[Harness] Mem0 memory layer: ENABLED');
+    } else {
+      console.log('[Harness] Mem0 memory layer: DISABLED (not available)');
+    }
+
+    // Initialize Discord bot
+    const discordReady = await startDiscordBot();
+    if (discordReady) {
+      console.log('[Harness] Discord bot: CONNECTED');
+    } else {
+      console.log('[Harness] Discord bot: DISABLED (no token)');
+    }
   }
 
   private async runMigrations(): Promise<void> {
@@ -184,6 +202,8 @@ harness.initialize().then(() => {
   if (status.namespace) {
     console.log(`[Harness] Temporal Namespace: ${status.namespace}`);
   }
+  console.log(`[Harness] Mem0 Memory: ${isMem0Available() ? 'ENABLED' : 'DISABLED'}`);
+  console.log(`[Harness] Discord Bot: ${isDiscordBotConnected() ? 'CONNECTED' : 'DISABLED'}`);
 });
 
 // Graceful shutdown
