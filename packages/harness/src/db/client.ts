@@ -262,11 +262,12 @@ export async function initializeDatabase(): Promise<void> {
     console.log('[DB] Database initialized with default agents');
 
     // === Seed sample startups ===
-    console.log('[DB] Checking if startup seed is needed...');
+    console.log('[DB] About to count startups...');
     try {
       const startupCount = await prisma.startup.count();
       console.log('[DB] Current startups count:', startupCount);
-      if (startupCount === 0) {
+      const forceSeed = process.env.SEED_DATABASE === '1';
+      if (startupCount === 0 || forceSeed) {
         console.log('[DB] About to insert startup seed data...');
         await prisma.$executeRawUnsafe(`
           INSERT INTO "startups" (id, name, description, "founderBrief", stage, "createdAt", "updatedAt")
