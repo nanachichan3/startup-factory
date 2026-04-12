@@ -54,8 +54,8 @@ class StartupFactoryHarness {
       return;
     }
     try {
-      console.log('[Harness] Running database migrations...');
-      execSync('npx prisma migrate deploy --schema=./prisma/schema.prisma', {
+      console.log('[Harness] Running database schema sync (prisma db push)...');
+      execSync('npx prisma db push --schema=./prisma/schema.prisma --accept-data-loss', {
         stdio: 'pipe',
         cwd: '/app',
         env: { ...process.env },
@@ -63,10 +63,10 @@ class StartupFactoryHarness {
       console.log('[Harness] Database migrations complete');
     } catch (error: any) {
       const msg = error.stderr?.toString() || error.message || '';
-      if (msg.includes('already up to date') || msg.includes('no pending migrations')) {
-        console.log('[Harness] Database migrations already up to date');
+      if (msg.includes('already up to date') || msg.includes('no pending migrations') || msg.includes('already in sync')) {
+        console.log('[Harness] Database schema is in sync');
       } else {
-        console.warn('[Harness] Migration warning:', msg.substring(0, 200));
+        console.warn('[Harness] Database setup warning:', msg.substring(0, 200));
       }
     }
   }
