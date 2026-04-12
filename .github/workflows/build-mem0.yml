@@ -9,18 +9,16 @@ jobs:
     permissions:
       packages: write
       contents: read
+    env:
+      NEO4J_URI: ""
     steps:
       - uses: actions/checkout@v4
       
       - name: Clone Mem0 source
-        run: git clone --depth=1 https://github.com/mem0ai/mem0.git ./mem0-source
-      
-      - name: Add all deps and init dir
         run: |
-          echo "psycopg[binary]>=3.2.0" >> ./mem0-source/server/requirements.txt
-          echo "langchain-neo4j" >> ./mem0-source/server/requirements.txt
-          echo "rank-bm25" >> ./mem0-source/server/requirements.txt
-          sed -i 's|^(RUN pip install.*)$|RUN apt-get update \&\& apt-get install -y libpq-dev \&\& pip install --no-cache-dir -r requirements.txt \&\& mkdir -p /data|' ./mem0-source/server/Dockerfile
+          git clone --depth=1 https://github.com/mem0ai/mem0.git
+          cp mem0/server/* .
+          cp mem0/server/requirements.txt ./requirements.txt
       
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -35,8 +33,12 @@ jobs:
       - name: Build and push linux/amd64 image
         uses: docker/build-push-action@v5
         with:
-          context: ./mem0-source/server
+          context: .
+          file: ./Dockerfile.mem0
           push: true
-          tags: ghcr.io/nanachichan3/mem0:v5
+          tags: ghcr.io/nanachichan3/mem0:v6
           platforms: linux/amd64
-          no-cache: true
+          build-args: |
+            NEO4J_URI=
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
