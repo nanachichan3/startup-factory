@@ -20,6 +20,9 @@ services:
     image: temporalio/auto-setup:1.25.0
     container_name: factory-temporal
     restart: unless-stopped
+    ports:
+      - "7233:7233"
+      - "8080:8080"
     environment:
       - DB=postgres12
       - DB_PORT=5432
