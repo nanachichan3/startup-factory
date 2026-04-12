@@ -1,39 +1,15 @@
+# Mem0 is configured via Mem0 Cloud API
+# For self-hosted: Build amd64 image from source and push to GHCR
+# 
+# To get started with Mem0 Cloud:
+# 1. Sign up at https://app.mem0.ai
+# 2. Get your API key
+# 3. Add MEM0_API_KEY to your env vars
+#
+# Mem0 Cloud API base: https://api.mem0.ai/v1
 version: '3.8'
 
 services:
-  mem0:
-    image: mem0/mem0-api-server:latest
-    container_name: factory-mem0
-    restart: unless-stopped
-    ports:
-      - "8888:8000"
-    environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://openrouter.ai/api/v1}
-      - DATABASE_URL=${DATABASE_URL:-postgres://postgres:postgres@postgres:5432/mem0}
-      - MEM0_DATABASE=pgvector
-    depends_on:
-      - postgres
-    networks:
-      - factory-network
-
-  postgres:
-    image: ankane/pgvector:latest
-    container_name: factory-mem0-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: mem0
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    volumes:
-      - mem0_pgdata:/var/lib/postgresql/data
-    networks:
-      - factory-network
-
-volumes:
-  mem0_pgdata:
-
-networks:
-  factory-network:
-    name: factory-network
-    external: true
+  # Mem0 is used via cloud API - no local container needed
+  # The factory harness calls Mem0 Cloud API directly
+  # Point to: https://api.mem0.ai/v1 with your API key
