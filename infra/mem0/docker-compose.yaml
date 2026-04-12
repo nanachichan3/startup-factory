@@ -16,7 +16,7 @@
 version: '3.8'
 services:
   mem0:
-    image: mem0ai/mem0:latest
+    image: mem0/mem0:1.0.0
     ports:
       - "8888:8888"
     environment:
