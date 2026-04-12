@@ -40,8 +40,6 @@ services:
     image: ghcr.io/nanachichan3/startup-factory:latest
     container_name: factory-api
     restart: unless-stopped
-    ports:
-      - "3001:3000"
     environment:
       - NODE_ENV=production
       - TEMPORAL_ADDRESS=factory-temporal:7233
