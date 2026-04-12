@@ -54,10 +54,11 @@ services:
       - NODE_ENV=production
       - TEMPORAL_ADDRESS=temporal:7233
       - TEMPORAL_NAMESPACE=default
-      # Use local factory-postgres on the same compose network
       - DATABASE_URL=postgres://temporal:temporal123@postgres:5432/temporal
       - DASHBOARD_USER=admin
       - DASHBOARD_PASS=factory2026
+      - MEM0_API_KEY=${OPENAI_API_KEY}
+      - MEM0_BASE_URL=http://factory-mem0:8000
     depends_on:
       - temporal
     labels:
@@ -70,5 +71,47 @@ services:
     networks:
       - factory-network
 
+  mem0:
+    image: ghcr.io/nanachichan3/mem0:v6
+    container_name: factory-mem0
+    restart: unless-stopped
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://openrouter.ai/api/v1}
+      - POSTGRES_HOST=mem0-postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=mem0
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_COLLECTION_NAME=memories
+      - HISTORY_DB_PATH=/app/history/memory.db
+    volumes:
+      - mem0_history:/app/history
+    depends_on:
+      mem0-postgres:
+        condition: service_healthy
+    networks:
+      - factory-network
+
+  mem0-postgres:
+    image: ankane/pgvector:latest
+    container_name: mem0-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mem0
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - mem0_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mem0"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - factory-network
+
 volumes:
   postgres_data:
+  mem0_history:
+  mem0_pgdata:
