@@ -5,8 +5,8 @@ services:
     image: ghcr.io/nanachichan3/mem0:v5
     container_name: factory-mem0
     restart: unless-stopped
-    ports:
-      - "5000:8000"
+    labels:
+      - "traefik.http.services.mem0.loadbalancer.server.port=8000"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://openrouter.ai/api/v1}
