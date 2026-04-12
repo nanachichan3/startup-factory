@@ -61,8 +61,8 @@ services:
   # Factory API Server
   factory-api:
     build:
-      context: .
-      dockerfile: packages/harness/Dockerfile
+      context: ./packages/harness
+      dockerfile: Dockerfile
     container_name: startup-factory-api
     ports:
       - "3001:3000"
