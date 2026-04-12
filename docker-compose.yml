@@ -81,6 +81,23 @@ services:
     networks:
       - factory-network
 
+  # Discord Gateway
+  discord-gateway:
+    build:
+      context: ./packages/discord-gateway
+      dockerfile: Dockerfile
+    container_name: startup-factory-discord
+    environment:
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
+      - FACTORY_API_URL=http://factory-api:3000
+      - DASHBOARD_USER=${DASHBOARD_USER:-admin}
+      - DASHBOARD_PASS=${DASHBOARD_PASS:-password}
+    depends_on:
+      - factory-api
+    networks:
+      - factory-network
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   redis_data:
