@@ -263,11 +263,11 @@ export async function initializeDatabase(): Promise<void> {
 
     // === Seed sample startups ===
     console.log('[DB] Checking if startup seed is needed...');
-    process.stdout.flush();
     try {
       const startupCount = await prisma.startup.count();
       console.log('[DB] Current startups count:', startupCount);
       if (startupCount === 0) {
+        console.log('[DB] About to insert startup seed data...');
         await prisma.$executeRawUnsafe(`
           INSERT INTO "startups" (id, name, description, "founderBrief", stage, "createdAt", "updatedAt")
           VALUES 
@@ -286,11 +286,11 @@ export async function initializeDatabase(): Promise<void> {
 
     // === Seed sample tasks ===
     console.log('[DB] Checking if task seed is needed...');
-    process.stdout.flush();
     try {
       const taskCount = await prisma.task.count();
       console.log('[DB] Current tasks count:', taskCount);
       if (taskCount === 0) {
+        console.log('[DB] About to insert task seed data...');
         await prisma.$executeRawUnsafe(`
           INSERT INTO "tasks" (id, title, description, priority, status, assignee, phase, "estimateMinutes", "createdAt", "updatedAt")
           VALUES 
