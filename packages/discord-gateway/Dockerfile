@@ -2,24 +2,24 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install all dependencies (including devDependencies for build)
+# Copy package files
 COPY package*.json ./
-RUN npm ci
 
-# Copy source
-COPY . .
+# Install dependencies
+RUN npm ci --omit=dev && npm cache clean --force
 
-# Build TypeScript
-RUN npm run build
+# Copy source (TypeScript files)
+COPY tsconfig.json ./
+COPY src ./src
 
-# Remove devDependencies to keep image small
-RUN npm prune --production
+# Install tsx globally (lightweight ts runner, no compile needed)
+RUN npm install -g tsx
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && adduser -S discord-gateway -u 1001
 USER discord-gateway
 
-# Expose default port
 EXPOSE 3000
 
-CMD ["node", "dist/index.js"]
+# Run directly with tsx (no build step needed)
+CMD ["node", "--import", "tsx", "src/index.ts"]
