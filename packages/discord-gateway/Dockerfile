@@ -5,12 +5,15 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install all dependencies (including dev for tsx)
-RUN npm ci && npm cache clean --force
+# Install deps (npm install is faster than npm ci in alpine)
+RUN npm install --ignore-scripts
 
-# Copy source (TypeScript files)
+# Copy source
 COPY tsconfig.json ./
 COPY src ./src
+
+# Run directly with node + tsx (installed globally)
+RUN npm install -g tsx typescript @types/node
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && adduser -S discord-gateway -u 1001
@@ -18,5 +21,4 @@ USER discord-gateway
 
 EXPOSE 3000
 
-# Run directly with npx tsx (no build step needed)
 CMD ["npx", "tsx", "src/index.ts"]
