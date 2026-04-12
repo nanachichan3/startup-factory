@@ -3,16 +3,15 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-COPY tsconfig.json ./
+# Copy package files from packages/harness
+COPY packages/harness/package*.json ./
 
 # Install all dependencies (including dev for build)
 RUN npm ci
 
-# Copy source and prisma schema
-COPY src ./src
-COPY prisma ./prisma
+# Copy source and prisma schema from packages/harness
+COPY packages/harness/src ./src
+COPY packages/harness/prisma ./prisma
 
 # Build TypeScript
 RUN npm run build
@@ -23,7 +22,7 @@ FROM node:22-alpine
 WORKDIR /app
 
 # Copy package files for production deps
-COPY package*.json ./
+COPY packages/harness/package*.json ./
 
 # Install production dependencies only (no dev dependencies)
 RUN npm ci --production
