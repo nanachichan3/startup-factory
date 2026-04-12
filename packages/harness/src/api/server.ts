@@ -2,7 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import { createStartup, getStartup, listStartups, updateStartupStage, executeWorkflow, healthCheck } from './routes/startups.js';
 import { getDashboard, getDashboardSummary, getDashboardAgents, getDashboardStartups, getDashboardSessions } from './routes/dashboard.js';
 import { getDebugDb } from './routes/debug.js';
-import { listTasks, getTask, updateTask } from './routes/tasks.js';
+import { listTasks, getTask, updateTask, seedDatabase } from './routes/tasks.js';
 
 const app = express();
 
@@ -64,6 +64,7 @@ app.post('/api/startups/:id/execute', dashboardAuth, executeWorkflow);
 app.get('/api/tasks', dashboardAuth, listTasks);
 app.get('/api/tasks/:id', dashboardAuth, getTask);
 app.patch('/api/tasks/:id', dashboardAuth, updateTask);
+app.post('/api/seed', dashboardAuth, seedDatabase);
 
 // Error handler
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
