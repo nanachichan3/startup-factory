@@ -37,9 +37,7 @@ services:
         condition: service_healthy
 
   factory:
-    build:
-      context: ../..
-      dockerfile: packages/harness/Dockerfile
+    image: ghcr.io/nanachichan3/startup-factory:latest
     container_name: factory-api
     restart: unless-stopped
     environment:
