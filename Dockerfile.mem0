@@ -1,6 +1,5 @@
 FROM python:3.12-slim
 
-# Install system dependencies for psycopg
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     gcc \
@@ -9,31 +8,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 COPY requirements.txt .
-
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
 # Patch: use Python to remove neo4j graph_store from DEFAULT_CONFIG
-# This is more reliable than sed for nested structures
-RUN python3 -c "
-import re
-with open('main.py', 'r') as f:
-    content = f.read()
-# Remove the graph_store entry from DEFAULT_CONFIG
-content = re.sub(
-    r'\"graph_store\":\s*\{[^}]+\"provider\": \"neo4j\"[^}]+\},?\n?',
-    '',
-    content,
-    flags=re.DOTALL
-)
-with open('main.py', 'w') as f:
-    f.write(content)
-print('Patched main.py to remove neo4j graph_store')
-"
+COPY patch_memory.py /tmp/patch_memory.py
+RUN python3 /tmp/patch_memory.py
 
 EXPOSE 8000
-
 ENV PYTHONUNBUFFERED=1
-
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
