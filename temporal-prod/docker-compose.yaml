@@ -24,6 +24,7 @@ services:
       - "5433:5432"
     networks:
       - factory-network
+      - coolify
 
   temporal:
     image: temporalio/auto-setup:1.25.0
@@ -44,6 +45,7 @@ services:
         condition: service_healthy
     networks:
       - factory-network
+      - coolify
 
   factory:
     image: ghcr.io/nanachichan3/startup-factory:latest
@@ -68,6 +70,14 @@ services:
       - "traefik.http.middlewares.factory-auth.basicauth.users=admin:$$apr1$$r4Z7vUZO$$H.Vc5nF.bQAVnKzJQ5D2M/"
     networks:
       - factory-network
+      - coolify
 
 volumes:
   postgres_data:
+
+networks:
+  factory-network:
+    driver: bridge
+  coolify:
+    name: coolify
+    external: true
