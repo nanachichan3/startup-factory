@@ -2,19 +2,17 @@ version: '3.8'
 
 services:
   mem0:
-    image: ghcr.io/nanachichan3/mem0:v2
+    image: ghcr.io/nanachichan3/mem0:v3
     container_name: factory-mem0
     restart: unless-stopped
     ports:
       - "8888:8000"
-    command: >
-      sh -c "mkdir -p /data && uvicorn main:app --host 0.0.0.0 --port 8000"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://openrouter.ai/api/v1}
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/mem0
       - MEM0_DATABASE=pgvector
-      - MEM0_DB_PATH=/data/db
+      - HISTORY_DB_PATH=/data/history.db
     volumes:
       - mem0_data:/data
     depends_on:
