@@ -9,8 +9,8 @@ RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 # Copy only the harness package files (no monorepo root needed)
 COPY packages/harness/package.json ./
 
-# Install dependencies (including dev for build)
-RUN npm ci
+# Install dependencies (npm install is more forgiving than npm ci)
+RUN npm install
 
 # Copy all source code
 COPY packages/harness/src ./src
@@ -35,7 +35,7 @@ RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 COPY packages/harness/package.json ./
 
 # Install production dependencies only
-RUN npm ci --production || npm install --omit=dev
+RUN npm install --omit=dev
 
 # Copy built artifacts from builder
 COPY --from=builder /app/dist ./dist
