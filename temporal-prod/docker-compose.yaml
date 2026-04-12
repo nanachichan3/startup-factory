@@ -1,4 +1,9 @@
 version: '3.8'
+
+networks:
+  factory-network:
+    driver: bridge
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -17,6 +22,8 @@ services:
       retries: 5
     ports:
       - "5433:5432"
+    networks:
+      - factory-network
 
   temporal:
     image: temporalio/auto-setup:1.25.0
@@ -30,11 +37,13 @@ services:
       - DB_PORT=5432
       - POSTGRES_USER=temporal
       - POSTGRES_PWD=temporal123
-      - POSTGRES_SEEDS=postgres
+      - POSTGRES_SEEDS=factory-postgres
       - POSTGRES_DB=temporal
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - factory-network
 
   factory:
     image: ghcr.io/nanachichan3/startup-factory:latest
@@ -44,7 +53,8 @@ services:
       - NODE_ENV=production
       - TEMPORAL_ADDRESS=factory-temporal:7233
       - TEMPORAL_NAMESPACE=default
-      - DATABASE_URL=postgres://postgres:WFBGCo6cjCf7NbxVfkPSe5x0P41v3d27MowubhpPmfk9CgrfcMhBUvp8lyCfjobL@x0k4w8404wckwwcswg808gco:5432/projects
+      # Use local factory-postgres on the same compose network
+      - DATABASE_URL=postgres://temporal:temporal123@factory-postgres:5432/temporal
       - HTTP_BASIC_AUTH_USER=admin
       - HTTP_BASIC_AUTH_PASS=factory2026
     depends_on:
@@ -56,6 +66,8 @@ services:
       - "traefik.http.routers.factory.tls=true"
       - "traefik.http.routers.factory.tls.certresolver=letsencrypt"
       - "traefik.http.middlewares.factory-auth.basicauth.users=admin:$$apr1$$r4Z7vUZO$$H.Vc5nF.bQAVnKzJQ5D2M/"
+    networks:
+      - factory-network
 
 volumes:
   postgres_data:
