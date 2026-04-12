@@ -34,5 +34,29 @@ services:
       postgres:
         condition: service_healthy
 
+  factory-api:
+    image: ghcr.io/nanachichan3/startup-factory:latest
+    container_name: factory-api
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:placeholder@x0k4w8404wckwwcswg808gco:5432/projects}
+      - TEMPORAL_ADDRESS=factory-temporal:7233
+      - TEMPORAL_NAMESPACE=default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.factory-web.rule=Host(`startup-factory.qed.quest`)"
+      - "traefik.http.services.factory-web.loadbalancer.server.port=3000"
+      - "traefik.http.routers.factory-web.tls=true"
+      - "traefik.http.routers.factory-web.tls.certresolver=letsencrypt"
+    networks:
+      - coolify
+
 volumes:
   postgres_data:
+
+networks:
+  coolify:
+    external: true
