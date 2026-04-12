@@ -6,6 +6,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
       
@@ -22,7 +25,7 @@ jobs:
       - name: Build and push linux/amd64 image
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: ./mem0/server
           push: true
           tags: ghcr.io/nanachichan3/mem0:latest
           platforms: linux/amd64
