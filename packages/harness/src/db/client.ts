@@ -211,6 +211,22 @@ export async function initializeDatabase(): Promise<void> {
       );
     `);
     
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "tasks" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "title" TEXT NOT NULL,
+        "description" TEXT NOT NULL,
+        "priority" TEXT NOT NULL DEFAULT 'medium',
+        "status" TEXT NOT NULL DEFAULT 'todo',
+        "assignee" TEXT,
+        "phase" TEXT NOT NULL DEFAULT 'phase1',
+        "estimateMinutes" INTEGER NOT NULL DEFAULT 30,
+        "workflowRunId" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL
+      );
+    `);
+    
     console.log('[DB] Schema created via raw SQL');
 
     // Seed default factory agents
