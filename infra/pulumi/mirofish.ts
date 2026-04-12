@@ -1,97 +1,121 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as command from "@pulumi/command";
-import { Base64 } from "js-base64";
+import { execSync } from "child_process";
 
-// Configuration
+/**
+ * MiroFish Deployment via Coolify
+ * 
+ * This script deploys MiroFish (social media simulation engine) to Coolify
+ * using the dockerimage buildpack (pre-built Docker image, no git required).
+ * 
+ * Usage:
+ *   export COOLIFY_API_KEY=<your-api-key>
+ *   npm run up
+ * 
+ * The script will:
+ *   1. Create the MiroFish app if it doesn't exist
+ *   2. Deploy the latest Docker image
+ *   3. Wait for the app to become healthy
+ *   4. Validate the API endpoint
+ */
+
 const config = new pulumi.Config();
-const coolifyApiUrl = "https://qed.quest/api/v1";
-const coolifyApiKey = config.requireSecret("coolifyApiKey");
 
-// Project/environment IDs (Claw project, production environment)
-const projectUuid = "k8kgkwocskk4k084k0s0ko48";
-const environmentUuid = "lc8cs08gsook8kcswsg0gowk";
-const serverUuid = "bowowgww8cw08kokogk88oss";
+// Hardcoded values for this deployment
+const APP_NAME = "mirofish";
+const APP_DESCRIPTION = "MiroFish - Social Media Simulation for Self-Degree Framework";
+const IMAGE_NAME = "ghcr.io/nanachichan3/mirofish";
+const IMAGE_TAG = "latest";
+const FQDN = "https://agg88ows44sw4so0o4cc0sk4.qed.quest";
+const PORTS_EXPOSES = "80,5001";
+const PROJECT_UUID = "k8kgkwocskk4k084k0s0ko48";
+const ENVIRONMENT_NAME = "production";
+const SERVER_UUID = "bowowgww8cw08kokogk88oss";
 
-// MiroFish app settings
-const appName = "mirofish";
-const imageName = "ghcr.io/nanachichan3/mirofish";
-const imageTag = "latest";
-const fqdn = "https://agg88ows44sw4so0o4cc0sk4.qed.quest";
-const portsExposes = "80,5001";
+// Helper function to run coolify CLI commands
+function coolify(args: string): string {
+    const cmd = `coolify ${args}`;
+    return execSync(cmd, { encoding: "utf-8", timeout: 60000 });
+}
 
-// Build the JSON payload for creating the app
-const createAppBody = JSON.stringify({
-  project_uuid: projectUuid,
-  environment_uuid: environmentUuid,
-  server_uuid: serverUuid,
-  name: appName,
-  description: "MiroFish - Social Media Simulation for Self-Degree Framework",
-  docker_registry_image_name: imageName,
-  docker_registry_image_tag: imageTag,
-  ports_exposes: portsExposes,
-  domains: fqdn,
-  build_pack: "dockerimage",
-  health_check_enabled: false,
-  redirect: "http",
-  instant_deploy: true,
+// Check if app already exists
+function findExistingApp(): string | null {
+    try {
+        const output = coolify("app list --format json");
+        const apps = JSON.parse(output);
+        const existing = apps.find((a: any) => a.name === APP_NAME);
+        return existing?.uuid || null;
+    } catch {
+        return null;
+    }
+}
+
+// Create new MiroFish app via Coolify CLI
+const existingUuid = findExistingApp();
+const appUuid = existingUuid || (() => {
+    pulumi.log.info("Creating new MiroFish app...");
+    const createOutput = coolify(
+        `app create dockerimage \
+        --project-uuid ${PROJECT_UUID} \
+        --environment-name "${ENVIRONMENT_NAME}" \
+        --server-uuid ${SERVER_UUID} \
+        --name ${APP_NAME} \
+        --description "${APP_DESCRIPTION}" \
+        --docker-registry-image-name ${IMAGE_NAME} \
+        --docker-registry-image-tag ${IMAGE_TAG} \
+        --ports-exposes "${PORTS_EXPOSES}" \
+        --domains "${FQDN}" \
+        --instant-deploy \
+        --health-check-enabled=false \
+        --format json`
+    );
+    const created = JSON.parse(createOutput);
+    return created.uuid;
+})();
+
+pulumi.log.info(`MiroFish app UUID: ${appUuid}`);
+
+// Start/deploy the application
+const deployOutput = command.localCommand("mirofish-deploy", {
+    create: `coolify app start ${appUuid}`,
+    opts: { ignoreChanges: ["create"] },
 });
 
-// Create the Coolify application via API
-const createApp = new command.local.Command("mirofish-create-app", {
-  create: coolifyApiKey.apply(apiKey => {
-    const curlCmd = `curl -s -X POST "${coolifyApiUrl}/applications" ` +
-      `-H "Authorization: Bearer ${apiKey}" ` +
-      `-H "Content-Type: application/json" ` +
-      `-H "Accept: application/json" ` +
-      `-d '${createAppBody}'`;
-    return curlCmd;
-  }),
-  opts: { ignoreChanges: ["create"] },
+// Wait for app to be reachable (poll up to 5 minutes)
+const waitForHealthy = command.localCommand("mirofish-wait-healthy", {
+    create: `
+        ATTEMPTS=30
+        for i in $(seq 1 $ATTEMPTS); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${FQDN}/api/simulation/list" 2>/dev/null || echo "000")
+            if [ "$STATUS" = "200" ]; then
+                echo "OK: MiroFish API is healthy"
+                exit 0
+            fi
+            echo "Attempt $i/$ATTEMPTS: status=$STATUS (waiting 10s)..."
+            sleep 10
+        done
+        echo "FAILED: MiroFish did not become healthy after $ATTEMPTS attempts"
+        exit 1
+    `,
+    opts: { dependsOn: [deployOutput], ignoreChanges: ["create"] },
 });
 
-// Parse the created app UUID from the response
-const appUuid = createApp.stdout.apply(stdout => {
-  try {
-    const response = JSON.parse(stdout.trim());
-    return response.data?.uuid || response.uuid || "";
-  } catch {
-    return "";
-  }
+// Validate the API
+const validateApi = command.localCommand("mirofish-validate", {
+    create: `curl -s --max-time 10 "${FQDN}/api/simulation/list" 2>&1`,
+    opts: { dependsOn: [waitForHealthy], ignoreChanges: ["create"] },
 });
 
-// Deploy the newly created application
-const deployApp = new command.local.Command("mirofish-deploy", {
-  create: appUuid.apply(uuid => {
-    const curlCmd = `curl -s -X POST "${coolifyApiUrl}/deployments" ` +
-      `-H "Authorization: Bearer pwDP3qcsqlEFbvEfedDWaRJfhiSLKfECajoL94e178669eb8" ` +
-      `-H "Content-Type: application/json" ` +
-      `-d '{"application_uuid": "${uuid}", "force_rebuild": true}'`;
-    return curlCmd;
-  }),
-  opts: { dependsOn: [createApp], ignoreChanges: ["create"] },
+// Validate frontend
+const validateFrontend = command.localCommand("mirofish-validate-frontend", {
+    create: `curl -s --max-time 10 "${FQDN}/" 2>&1 | grep -i "mirofish\|html" || echo "Frontend check failed"`,
+    opts: { dependsOn: [waitForHealthy], ignoreChanges: ["create"] },
 });
 
-// Poll for app health — wait until the app is reachable
-const waitForApp = new command.local.Command("mirofish-wait-health", {
-  create: appUuid.apply(uuid => {
-    // Try for up to 5 minutes (30 attempts × 10s)
-    const curlCmd = `for i in $(seq 1 30); do ` +
-      `status=$(curl -s -o /dev/null -w "%{http_code}" "https://agg88ows44sw4so0o4cc0sk4.qed.quest/api/simulation/list" 2>/dev/null); ` +
-      `if [ "$status" = "200" ]; then echo "OK"; break; fi; ` +
-      `echo "attempt $i: status=$status"; sleep 10; done`;
-    return curlCmd;
-  }),
-  opts: { dependsOn: [deployApp], ignoreChanges: ["create"] },
-});
-
-// Test the API endpoint
-const testApi = new command.local.Command("mirofish-test-api", {
-  create: `curl -s --max-time 10 "https://agg88ows44sw4so0o4cc0sk4.qed.quest/api/simulation/list" 2>&1`,
-  opts: { dependsOn: [waitForApp], ignoreChanges: ["create"] },
-});
-
-// Export results
-export const applicationUrl = fqdn;
-export const apiEndpoint = `${fqdn}/api/simulation/list`;
-export const healthEndpoint = `${fqdn}/api/health`;
+// Export outputs
+export const applicationUrl = FQDN;
+export const apiEndpoint = `${FQDN}/api/simulation/list`;
+export const healthEndpoint = `${FQDN}/api/health`;
 export const appUuid = appUuid;
+export const frontendUrl = FQDN;
+export const imageUsed = `${IMAGE_NAME}:${IMAGE_TAG}`;
