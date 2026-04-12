@@ -30,7 +30,7 @@ export async function getDebugDb(req: Request, res: Response): Promise<void> {
     prismaInitialized: !!prisma,
     connectionStatus,
     connectionError,
-    env NODE_ENV: process.env.NODE_ENV,
-    env DATABASE_URL_set: !!process.env.DATABASE_URL,
+    nodeEnv: process.env.NODE_ENV,
+    databaseUrlSet: !!process.env.DATABASE_URL,
   });
 }
