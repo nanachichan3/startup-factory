@@ -263,6 +263,7 @@ export async function initializeDatabase(): Promise<void> {
 
     // === Seed sample startups ===
     console.log('[DB] Checking if startup seed is needed...');
+    process.stdout.flush();
     try {
       const startupCount = await prisma.startup.count();
       console.log('[DB] Current startups count:', startupCount);
@@ -285,6 +286,7 @@ export async function initializeDatabase(): Promise<void> {
 
     // === Seed sample tasks ===
     console.log('[DB] Checking if task seed is needed...');
+    process.stdout.flush();
     try {
       const taskCount = await prisma.task.count();
       console.log('[DB] Current tasks count:', taskCount);
