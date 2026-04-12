@@ -37,7 +37,7 @@ services:
       - DB_PORT=5432
       - POSTGRES_USER=temporal
       - POSTGRES_PWD=temporal123
-      - POSTGRES_SEEDS=factory-postgres
+      - POSTGRES_SEEDS=postgres
       - POSTGRES_DB=temporal
     depends_on:
       postgres:
@@ -51,7 +51,7 @@ services:
     restart: unless-stopped
     environment:
       - NODE_ENV=production
-      - TEMPORAL_ADDRESS=factory-temporal:7233
+      - TEMPORAL_ADDRESS=temporal:7233
       - TEMPORAL_NAMESPACE=default
       # Use local factory-postgres on the same compose network
       - DATABASE_URL=postgres://temporal:temporal123@postgres:5432/temporal
