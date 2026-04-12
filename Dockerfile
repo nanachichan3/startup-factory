@@ -16,7 +16,7 @@ COPY packages/harness/tsconfig.json ./
 COPY packages/harness/src ./src
 
 # Install dependencies (root-level installs all workspace deps including discord.js, mem0ai)
-RUN npm install
+RUN npm install --legacy-peer-deps
 
 # Build TypeScript
 RUN npx tsc
@@ -36,7 +36,7 @@ RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
 
 # Install production dependencies
-RUN npm install --omit=dev
+RUN npm install --omit=dev --legacy-peer-deps
 
 # Copy built artifacts from builder
 COPY --from=builder /app/dist ./dist
