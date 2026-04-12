@@ -15,8 +15,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    networks:
-      - coolify
 
   temporal:
     image: temporalio/auto-setup:1.25.0
@@ -27,17 +25,11 @@ services:
       - DB_PORT=5432
       - POSTGRES_USER=temporal
       - POSTGRES_PWD=temporal123
-      - POSTGRES_SEEDS=postgres
+      - POSTGRES_SEEDS=factory-postgres
       - POSTGRES_DB=temporal
     depends_on:
       postgres:
         condition: service_healthy
-    networks:
-      - coolify
 
 volumes:
   postgres_data:
-
-networks:
-  coolify:
-    external: true
