@@ -10,8 +10,11 @@ services:
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://openrouter.ai/api/v1}
-      - DATABASE_URL=${DATABASE_URL:-postgres://postgres:postgres@postgres:5432/mem0}
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/mem0
       - MEM0_DATABASE=pgvector
+      - MEM0_DB_PATH=/data/db
+    volumes:
+      - mem0_data:/data
     depends_on:
       postgres:
         condition: service_healthy
@@ -34,3 +37,4 @@ services:
 
 volumes:
   mem0_pgdata:
+  mem0_data:
