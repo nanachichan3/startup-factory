@@ -1,0 +1,43 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: factory-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: temporal
+      POSTGRES_USER: temporal
+      POSTGRES_PASSWORD: temporal123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U temporal -d temporal"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - temporal-net
+
+  temporal:
+    image: temporalio/auto-setup:1.25.0
+    container_name: factory-temporal
+    restart: unless-stopped
+    environment:
+      - DB=postgresql
+      - DB_PORT=5432
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=temporal123
+      - POSTGRES_SEEDS=postgres
+      - POSTGRES_DB=temporal
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - temporal-net
+
+volumes:
+  postgres_data:
+
+networks:
+  temporal-net:
+    driver: bridge
