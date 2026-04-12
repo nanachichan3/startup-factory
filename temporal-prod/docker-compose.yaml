@@ -44,6 +44,9 @@ services:
       - NODE_ENV=production
       - TEMPORAL_ADDRESS=factory-temporal:7233
       - TEMPORAL_NAMESPACE=default
+      - DATABASE_URL=postgres://postgres:WFBGCo6cjCf7NbxVfkPSe5x0P41v3d27MowubhpPmfk9CgrfcMhBUvp8lyCfjobL@x0k4w8404wckwwcswg808gco:5432/projects
+      - HTTP_BASIC_AUTH_USER=admin
+      - HTTP_BASIC_AUTH_PASS=factory2026
     depends_on:
       - temporal
     labels:
@@ -52,6 +55,7 @@ services:
       - "traefik.http.services.factory.loadbalancer.server.port=3000"
       - "traefik.http.routers.factory.tls=true"
       - "traefik.http.routers.factory.tls.certresolver=letsencrypt"
+      - "traefik.http.middlewares.factory-auth.basicauth.users=admin:$$apr1$$r4Z7vUZO$$H.Vc5nF.bQAVnKzJQ5D2M/"
 
 volumes:
   postgres_data:
