@@ -6,8 +6,8 @@ services:
     image: temporalio/auto-setup:1.22.0
     container_name: startup-factory-temporal
     ports:
-      - "7233:7233"   # GRPC port
-      - "8233:8233"   # HTTP port
+      - "7234:7233"   # GRPC port
+      - "8234:8233"   # HTTP port
     environment:
       - DB=postgresql
       - DB_PORT=5432
@@ -24,7 +24,7 @@ services:
     image: temporalio/web:1.22.0
     container_name: startup-factory-temporal-web
     ports:
-      - "8080:8080"
+      - "8235:8080"
     environment:
       - TEMPORAL_ADDRESS=temporal:7233
     depends_on:
@@ -37,7 +37,7 @@ services:
     image: postgres:15-alpine
     container_name: startup-factory-postgres
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
       POSTGRES_DB: startup_factory
       POSTGRES_USER: postgres
@@ -52,7 +52,7 @@ services:
     image: redis:alpine
     container_name: startup-factory-redis
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
       - redis_data:/data
     networks:
@@ -65,7 +65,7 @@ services:
       dockerfile: packages/harness/Dockerfile
     container_name: startup-factory-api
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
       - NODE_ENV=production
       - TEMPORAL_ADDRESS=temporal:7233
