@@ -261,7 +261,8 @@ export async function initializeDatabase(): Promise<void> {
 
     console.log('[DB] Database initialized with default agents');
 
-    // Seed sample startups (only if none exist)
+    // === Seed sample startups ===
+    console.log('[DB] Checking if startup seed is needed...');
     try {
       const startupCount = await prisma.startup.count();
       console.log('[DB] Current startups count:', startupCount);
@@ -276,13 +277,14 @@ export async function initializeDatabase(): Promise<void> {
         `);
         console.log('[DB] Sample startups seeded');
       } else {
-        console.log('[DB] Startups already exist, skipping seed');
+        console.log('[DB] Startups already exist (' + startupCount + '), skipping seed');
       }
     } catch (err) {
       console.error('[DB] Startup seeding error:', err);
     }
 
-    // Seed sample tasks (only if none exist)
+    // === Seed sample tasks ===
+    console.log('[DB] Checking if task seed is needed...');
     try {
       const taskCount = await prisma.task.count();
       console.log('[DB] Current tasks count:', taskCount);
