@@ -71,4 +71,4 @@ services:
       - factory-network
 
 volumes:
-  postgres_data:
+  postgres_data:# Temporary comment
