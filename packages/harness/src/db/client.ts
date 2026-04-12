@@ -80,6 +80,139 @@ export async function initializeDatabase(): Promise<void> {
   }
   
   try {
+    // First, try to create tables using raw SQL (bypasses migration_lock.toml issues)
+    const createEnums = `
+      DO $$ BEGIN
+        CREATE TYPE "LifecycleStage" AS ENUM ('Ideation', 'Validation', 'Prototype', 'MVP', 'Growth', 'Scale', 'Optimize', 'Exit');
+      EXCEPTION WHEN duplicate_object THEN null;
+      END $$;
+      DO $$ BEGIN
+        CREATE TYPE "AgentStatus" AS ENUM ('active', 'inactive');
+      EXCEPTION WHEN duplicate_object THEN null;
+      END $$;
+      DO $$ BEGIN
+        CREATE TYPE "AssignmentStatus" AS ENUM ('pending', 'in_progress', 'completed', 'blocked');
+      EXCEPTION WHEN duplicate_object THEN null;
+      END $$;
+      DO $$ BEGIN
+        CREATE TYPE "WorkflowStatus" AS ENUM ('running', 'completed', 'failed', 'cancelled');
+      EXCEPTION WHEN duplicate_object THEN null;
+      END $$;
+    `;
+    await prisma.$executeRawUnsafe(createEnums);
+    
+    // Create tables if they don't exist
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "startups" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "name" TEXT NOT NULL,
+        "description" TEXT NOT NULL DEFAULT '',
+        "founderBrief" TEXT NOT NULL DEFAULT '',
+        "stage" "LifecycleStage" NOT NULL DEFAULT 'Ideation',
+        "currentWorkflowId" TEXT,
+        "lastExecutedAt" TIMESTAMP(3),
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL
+      );
+    `);
+    
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "artifacts" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "startupId" TEXT NOT NULL REFERENCES "startups"("id") ON DELETE CASCADE,
+        "type" TEXT NOT NULL,
+        "title" TEXT NOT NULL,
+        "content" TEXT NOT NULL,
+        "agentRole" TEXT,
+        "iteration" INTEGER NOT NULL DEFAULT 1,
+        "metadata" JSONB,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "lifecycle_events" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "startupId" TEXT NOT NULL REFERENCES "startups"("id") ON DELETE CASCADE,
+        "fromStage" "LifecycleStage",
+        "toStage" "LifecycleStage" NOT NULL,
+        "eventType" TEXT NOT NULL,
+        "metadata" JSONB,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "agents" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "name" TEXT NOT NULL UNIQUE,
+        "displayName" TEXT NOT NULL,
+        "role" TEXT NOT NULL,
+        "systemPrompt" TEXT NOT NULL,
+        "status" "AgentStatus" NOT NULL DEFAULT 'active',
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL
+      );
+    `);
+    
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "agent_assignments" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "agentId" TEXT NOT NULL REFERENCES "agents"("id") ON UPDATE CASCADE,
+        "startupId" TEXT NOT NULL REFERENCES "startups"("id") ON DELETE CASCADE,
+        "stage" "LifecycleStage" NOT NULL,
+        "status" "AssignmentStatus" NOT NULL DEFAULT 'pending',
+        "notes" TEXT,
+        "assignedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "completedAt" TIMESTAMP(3),
+        UNIQUE("agentId", "startupId", "stage")
+      );
+    `);
+    
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "agent_messages" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "senderId" TEXT NOT NULL REFERENCES "agents"("id") ON UPDATE CASCADE,
+        "recipientId" TEXT NOT NULL REFERENCES "agents"("id") ON UPDATE CASCADE,
+        "type" TEXT NOT NULL,
+        "payload" JSONB NOT NULL,
+        "workflowId" TEXT,
+        "runId" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "workflow_runs" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "workflowId" TEXT NOT NULL,
+        "startupId" TEXT NOT NULL REFERENCES "startups"("id") ON DELETE CASCADE,
+        "type" TEXT NOT NULL,
+        "status" "WorkflowStatus" NOT NULL DEFAULT 'running',
+        "input" JSONB,
+        "output" JSONB,
+        "error" TEXT,
+        "startedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "completedAt" TIMESTAMP(3),
+        UNIQUE("workflowId")
+      );
+    `);
+    
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "documents" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "startupId" TEXT NOT NULL REFERENCES "startups"("id") ON DELETE CASCADE,
+        "title" TEXT NOT NULL,
+        "type" TEXT NOT NULL,
+        "content" TEXT NOT NULL,
+        "metadata" JSONB,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL
+      );
+    `);
+    
+    console.log('[DB] Schema created via raw SQL');
+
     // Seed default factory agents
     const agents = [
       {
@@ -111,8 +244,26 @@ export async function initializeDatabase(): Promise<void> {
     }
 
     console.log('[DB] Database initialized with default agents');
-  } catch (error) {
-    console.error('[DB] Failed to initialize database:', error);
+  } catch (error: any) {
+    // If raw SQL schema creation fails, try just upserting agents
+    // (tables might already exist)
+    try {
+      const agents = [
+        { name: 'ceo', displayName: 'Nanachi', role: 'coordinator', systemPrompt: 'You are the CEO.' },
+        { name: 'cto', displayName: 'Hermes', role: 'technologist', systemPrompt: 'You are the CTO.' },
+        { name: 'cmo', displayName: '工場参谋', role: 'marketer', systemPrompt: 'You are the CMO.' }
+      ];
+      for (const agent of agents) {
+        await prisma!.agent.upsert({
+          where: { name: agent.name },
+          update: {},
+          create: agent
+        });
+      }
+      console.log('[DB] Agents upserted (schema already exists)');
+    } catch (e2) {
+      console.error('[DB] All DB initialization failed:', error?.message || error, '| Agent upsert also failed:', e2?.message || e2);
+    }
   }
 }
 

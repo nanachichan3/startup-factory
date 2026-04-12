@@ -50,23 +50,24 @@ class StartupFactoryHarness {
 
   private async runMigrations(): Promise<void> {
     if (!process.env.DATABASE_URL) {
-      console.warn('[Harness] DATABASE_URL not set — skipping migrations');
+      console.warn('[Harness] DATABASE_URL not set — skipping database setup');
       return;
     }
     try {
-      console.log('[Harness] Running database schema sync (prisma db push)...');
-      execSync('npx prisma db push --schema=./prisma/schema.prisma --accept-data-loss', {
+      console.log('[Harness] Running database schema sync...');
+      execSync('npx prisma db push --schema=./prisma/schema.prisma --accept-data-loss --skip-generate', {
         stdio: 'pipe',
         cwd: '/app',
         env: { ...process.env },
       });
-      console.log('[Harness] Database migrations complete');
+      console.log('[Harness] Database schema sync complete');
     } catch (error: any) {
       const msg = error.stderr?.toString() || error.message || '';
-      if (msg.includes('already up to date') || msg.includes('no pending migrations') || msg.includes('already in sync')) {
-        console.log('[Harness] Database schema is in sync');
+      if (msg.includes('already in sync') || msg.includes('has not changed')) {
+        console.log('[Harness] Database schema is already in sync');
       } else {
-        console.warn('[Harness] Database setup warning:', msg.substring(0, 200));
+        console.warn('[Harness] Database setup warning (non-fatal):', msg.substring(0, 200));
+        // Continue anyway — the API can still serve demo data
       }
     }
   }
