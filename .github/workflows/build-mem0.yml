@@ -28,7 +28,7 @@ jobs:
           context: ./mem0-app
           file: ./mem0-app/Dockerfile
           push: true
-          tags: ghcr.io/nanachichan3/mem0:v11
+          tags: ghcr.io/nanachichan3/mem0:v12
           platforms: linux/amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max
