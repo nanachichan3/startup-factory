@@ -70,7 +70,7 @@ services:
       - traefik.http.services.factory.loadbalancer.server.port=3000
       - traefik.http.routers.factory.tls=true
       - traefik.http.routers.factory.tls.certresolver=letsencrypt
-      - traefik.http.middlewares.factory-auth.basicauth.users=admin:$$apr1$$r4Z7vUZO$$H.Vc5nF.bQAVnKzJQ5D2M/
+      - traefik.http.middlewares.factory-auth.basicauth.users=admin:$$apr1$$mciXOT58$$JbYq9mwT1BGsSri.mDxZ.1/
       - traefik.http.routers.factory.middlewares=factory-auth
 
   mem0:
