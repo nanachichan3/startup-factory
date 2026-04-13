@@ -2,11 +2,9 @@ version: '3.8'
 
 services:
   mem0:
-    image: mem0ai/mem0:latest
+    image: ghcr.io/nanachichan3/mem0:v6
     container_name: factory-mem0
     restart: unless-stopped
-    ports:
-      - "5000:8000"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://openrouter.ai/api/v1}
@@ -22,8 +20,8 @@ services:
     depends_on:
       mem0-postgres:
         condition: service_healthy
-    healthcheck:
-      disable: true
+    networks:
+      - osmqw04ftbdhud2cxp3e9s3p
 
   mem0-postgres:
     image: ankane/pgvector:latest
@@ -40,7 +38,14 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - osmqw04ftbdhud2cxp3e9s3p
 
 volumes:
   mem0_pgdata:
   mem0_history:
+
+networks:
+  osmqw04ftbdhud2cxp3e9s3p:
+    name: osmqw04ftbdhud2cxp3e9s3p
+    driver: bridge
