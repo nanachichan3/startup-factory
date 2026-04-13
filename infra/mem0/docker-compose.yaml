@@ -4,32 +4,29 @@ services:
   mem0:
     image: ghcr.io/nanachichan3/mem0:v6
     container_name: factory-mem0
-    # restart: unless-stopped  # disabled for debug
+    restart: unless-stopped
     ports:
-      - "8010:5000"
+      - "5000:8000"
     environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-demo-key}
       - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://openrouter.ai/api/v1}
       - POSTGRES_HOST=mem0-postgres
       - POSTGRES_PORT=5432
-      - POSTGRES_DB=${POSTGRES_DB:-mem0}
+      - POSTGRES_DB=mem0
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_COLLECTION_NAME=memories
-      - HISTORY_DB_PATH=/app/history/memory.db
-    volumes:
-      - mem0_history:/app/history
-    depends_on:
-      mem0-postgres:
-        condition: service_healthy
-    # restart: unless-stopped
-    networks:
-      - osmqw04ftbdhud2cxp3e9s3p
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   mem0-postgres:
-    image: ankane/pgvector:latest
+    image: postgres:16-alpine
     container_name: mem0-postgres
-    # restart: unless-stopped  # disabled for debug
+    restart: unless-stopped
     environment:
       POSTGRES_DB: mem0
       POSTGRES_USER: postgres
@@ -41,15 +38,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-    # restart: unless-stopped
-    networks:
-      - osmqw04ftbdhud2cxp3e9s3p
 
 volumes:
   mem0_pgdata:
-  mem0_history:
-
-networks:
-  osmqw04ftbdhud2cxp3e9s3p:
-    name: osmqw04ftbdhud2cxp3e9s3p
-    driver: bridge
