@@ -5,8 +5,6 @@ services:
     image: ghcr.io/nanachichan3/mem0:v8
     container_name: factory-mem0
     restart: unless-stopped
-    profiles:
-      - default
     ports:
       - "5000:5000"
     environment:
