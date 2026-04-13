@@ -45,7 +45,7 @@ services:
         condition: service_healthy
 
   factory:
-    image: ghcr.io/nanachichan3/startup-factory:ad47ffc
+    image: ghcr.io/nanachichan3/startup-factory:sha-30a9feb
     container_name: factory-api
     restart: unless-stopped
     command: node dist/index.js
