@@ -2,15 +2,18 @@ version: '3.8'
 
 services:
   mem0:
-    image: nginx:alpine
+    image: ghcr.io/nanachichan3/mem0:v11
     container_name: factory-mem0
     restart: unless-stopped
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://openrouter.ai/api/v1}
     networks:
       - coolify
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.mem0.rule=Host(`osmqw04ftbdhud2cxp3e9s3p.qed.quest`)"
-      - "traefik.http.services.mem0.loadbalancer.server.port=80"
+      - "traefik.http.services.mem0.loadbalancer.server.port=5000"
       - "traefik.http.routers.mem0.tls=true"
       - "traefik.http.routers.mem0.tls.certresolver=letsencrypt"
     healthcheck:
