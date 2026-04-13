@@ -49,7 +49,7 @@ services:
     image: ghcr.io/nanachichan3/startup-factory:latest
     container_name: factory-api
     restart: unless-stopped
-    command: sh -c "npx prisma db push --schema=./prisma/schema.prisma --accept-data-loss --skip-generate && node dist/index.js"
+    command: sh -c "npx prisma db push --schema=./prisma/schema.prisma --accept-data-loss --skip-generate --skip-seed ; node dist/index.js"
     environment:
       - NODE_ENV=production
       - TEMPORAL_ADDRESS=temporal:7233
