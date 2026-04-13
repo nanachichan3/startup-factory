@@ -23,6 +23,7 @@ services:
     image: ghcr.io/nanachichan3/mem0:v7
     container_name: factory-mem0
     restart: unless-stopped
+    command: sleep 3600
     ports:
       - "5000:5000"
     environment:
