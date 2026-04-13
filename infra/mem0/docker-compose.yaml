@@ -17,7 +17,8 @@ services:
       timeout: 5s
       retries: 10
     networks:
-      - osmqw04ftbdhud2cxp3e9s3p
+      - coolify
+      - mem0-internal
 
   mem0:
     image: ghcr.io/nanachichan3/mem0:v7
@@ -53,13 +54,17 @@ services:
       mem0-postgres:
         condition: service_healthy
     networks:
-      - osmqw04ftbdhud2cxp3e9s3p
+      - coolify
+      - mem0-internal
 
 volumes:
   mem0_pgdata:
   mem0_history:
 
 networks:
-  osmqw04ftbdhud2cxp3e9s3p:
-    name: osmqw04ftbdhud2cxp3e9s3p
+  coolify:
+    name: coolify
+    external: true
+  mem0-internal:
+    name: mem0-internal
     driver: bridge
