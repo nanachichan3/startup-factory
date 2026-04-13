@@ -2,27 +2,13 @@ version: '3.8'
 
 services:
   mem0:
-    image: ghcr.io/nanachichan3/mem0:v6
+    image: nginx:alpine
     container_name: factory-mem0
     restart: unless-stopped
     ports:
-      - "8010:5000"
-    environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://openrouter.ai/api/v1}
-      - HISTORY_DB_PATH=/app/history/memory.db
-    volumes:
-      - mem0_history:/app/history
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:5000/ || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - "8010:80"
     networks:
       - osmqw04ftbdhud2cxp3e9s3p
-
-volumes:
-  mem0_history:
 
 networks:
   osmqw04ftbdhud2cxp3e9s3p:
