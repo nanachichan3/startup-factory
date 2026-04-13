@@ -19,12 +19,11 @@ services:
       - "traefik.http.routers.mem0.tls.certresolver=letsencrypt"
     networks:
       - coolify
-      - osmqw04ftbdhud2cxp3e9s3p
 
 volumes:
   mem0_history:
 
 networks:
-  osmqw04ftbdhud2cxp3e9s3p:
-    name: osmqw04ftbdhud2cxp3e9s3p
-    driver: bridge
+  coolify:
+    name: coolify
+    external: true
