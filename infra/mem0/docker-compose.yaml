@@ -5,8 +5,6 @@ services:
     image: ghcr.io/nanachichan3/mem0:v8
     container_name: factory-mem0
     restart: unless-stopped
-    ports:
-      - "5000:5000"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://openrouter.ai/api/v1}
@@ -15,6 +13,12 @@ services:
       - mem0_data:/app/data
     networks:
       - coolify
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mem0.rule=Host(`osmqw04ftbdhud2cxp3e9s3p.qed.quest`)"
+      - "traefik.http.services.mem0.loadbalancer.server.port=5000"
+      - "traefik.http.routers.mem0.tls=true"
+      - "traefik.http.routers.mem0.tls.certresolver=letsencrypt"
     healthcheck:
       disable: true
     command:
