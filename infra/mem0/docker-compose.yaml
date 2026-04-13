@@ -11,7 +11,6 @@ services:
       - HISTORY_DB_PATH=/app/history/memory.db
     volumes:
       - mem0_data:/app/data
-      - mem0_logs:/tmp
     networks:
       - coolify
     labels:
@@ -22,11 +21,9 @@ services:
       - "traefik.http.routers.mem0.tls.certresolver=letsencrypt"
     healthcheck:
       disable: true
-    entrypoint: ["sh", "-c", "python3 -c \"import main; print('IMPORT_OK')\" > /tmp/startup.log 2>&1; tail -f /tmp/startup.log & sleep 5; exec uvicorn main:app --host 0.0.0.0 --port 5000"]
 
 volumes:
   mem0_data:
-  mem0_logs:
 
 networks:
   coolify:
