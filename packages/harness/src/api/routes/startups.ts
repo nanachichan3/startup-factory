@@ -43,7 +43,7 @@ export async function createStartup(req: Request, res: Response): Promise<void> 
     const validStage = (stage && STARTUP_STAGES.includes(stage) ? stage : 'idea') as keyof typeof STAGE_TO_ENUM;
     const enumStage = STAGE_TO_ENUM[validStage];
 
-    if (isDemoMode || !prisma) {
+    if (!prisma) {
       // Demo mode - use in-memory storage
       const startup: DemoStartup = {
         id: `startup-${Date.now()}`,
@@ -99,7 +99,7 @@ export async function createStartup(req: Request, res: Response): Promise<void> 
  */
 export async function listStartups(_req: Request, res: Response): Promise<void> {
   try {
-    if (isDemoMode || !prisma) {
+    if (!prisma) {
       res.json({ 
         startups: demoList, 
         count: demoList.length,
@@ -137,7 +137,7 @@ export async function getStartup(req: Request, res: Response): Promise<void> {
   try {
     const id = req.params.id as string;
 
-    if (isDemoMode || !prisma) {
+    if (!prisma) {
       const startup = demoStore.get(id);
       if (startup) {
         res.json(startup);
@@ -191,7 +191,7 @@ export async function updateStartupStage(req: Request, res: Response): Promise<v
       return;
     }
 
-    if (isDemoMode || !prisma) {
+    if (!prisma) {
       const startup = demoStore.get(id);
       if (!startup) {
         res.status(404).json({ error: 'Startup not found' });
@@ -252,7 +252,7 @@ export async function executeWorkflow(req: Request, res: Response): Promise<void
 
     let startup: any;
     
-    if (isDemoMode || !prisma) {
+    if (!prisma) {
       startup = demoStore.get(id);
       if (!startup) {
         res.status(404).json({ error: 'Startup not found' });
@@ -401,7 +401,7 @@ export async function healthCheck(_req: Request, res: Response): Promise<void> {
     status, 
     service: 'startup-factory-api',
     timestamp: new Date().toISOString(),
-    mode: isDemoMode ? 'demo' : 'production',
+    mode: (!prisma || !(await isDatabaseHealthy())) ? 'demo' : 'production',
     dependencies: {
       database: dbHealthy ? 'connected' : 'disconnected (demo mode)',
       temporal: temporalReady ? 'connected' : 'disconnected'
