@@ -1,0 +1,5 @@
+fastapi>=0.115.0
+uvicorn>=0.30.0
+mem0ai>=0.1.48
+chromadb>=0.5.0
+openai>=1.0.0
