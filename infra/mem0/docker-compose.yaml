@@ -1,56 +1,25 @@
 version: '3.8'
 
 services:
-  mem0-postgres:
-    image: ankane/pgvector:latest
-    container_name: mem0-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: mem0
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    volumes:
-      - mem0_pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d mem0"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
   mem0:
-    image: ghcr.io/nanachichan3/mem0:v7
+    image: ghcr.io/nanachichan3/mem0:v8
     container_name: factory-mem0
     restart: unless-stopped
     profiles:
       - default
-    command: >
-      sh -c '
-        cd /app
-        python3 -c "import main; print(\"OK\")" > /tmp/out.log 2> /tmp/err.log
-        if grep -q OK /tmp/out.log; then
-          exec uvicorn main:app --host 0.0.0.0 --port 80
-        else
-          echo "FAILED:" && cat /tmp/err.log && cat /tmp/out.log && sleep 3600
-        fi
-      '
     ports:
-      - "80:80"
+      - "5000:5000"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://openrouter.ai/api/v1}
-      - POSTGRES_HOST=mem0-postgres
-      - POSTGRES_PORT=5432
-      - POSTGRES_DB=mem0
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_COLLECTION_NAME=memories
       - HISTORY_DB_PATH=/app/history/memory.db
     volumes:
-      - mem0_history:/app/history
-    depends_on:
-      mem0-postgres:
-        condition: service_healthy
+      - mem0_data:/app/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
-  mem0_pgdata:
-  mem0_history:
+  mem0_data:
