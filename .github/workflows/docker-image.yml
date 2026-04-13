@@ -30,6 +30,13 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Bump cache key
+        run: |
+          # Touch source files to bust Docker layer cache
+          find packages/harness/src -name "*.ts" -exec touch {} \;
+          # Also touch package files
+          touch package.json package-lock.json packages/harness/package.json
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
