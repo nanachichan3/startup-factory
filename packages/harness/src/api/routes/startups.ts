@@ -408,4 +408,3 @@ export async function healthCheck(_req: Request, res: Response): Promise<void> {
     }
   });
 }
-# Force rebuild Mon Apr 13 12:31:19 UTC 2026
