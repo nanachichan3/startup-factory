@@ -11,19 +11,6 @@ services:
       - HISTORY_DB_PATH=/app/history/memory.db
     volumes:
       - mem0_history:/app/history
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.mem0.rule=Host(`osmqw04ftbdhud2cxp3e9s3p.qed.quest`)"
-      - "traefik.http.services.mem0.loadbalancer.server.port=5000"
-      - "traefik.http.routers.mem0.tls=true"
-      - "traefik.http.routers.mem0.tls.certresolver=letsencrypt"
-    networks:
-      - coolify
 
 volumes:
   mem0_history:
-
-networks:
-  coolify:
-    name: coolify
-    external: true
