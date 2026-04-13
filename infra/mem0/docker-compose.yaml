@@ -14,11 +14,10 @@ services:
     volumes:
       - mem0_data:/app/data
       - mem0_logs:/tmp
-    command: >
-      sh -c
-      "python3 -c \"import main; print('IMPORT_OK')\" > /tmp/startup.log 2>&1 || true ;
-      tail /tmp/startup.log ;
-      sleep 36000"
+    command:
+      - sh
+      - -c
+      - "python3 -c \"import main; print('IMPORT_OK')\" > /tmp/startup.log 2>&1 || true; tail /tmp/startup.log; sleep 36000"
     healthcheck:
       disable: true
 
