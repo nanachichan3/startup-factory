@@ -28,13 +28,13 @@ services:
         cd /app
         python3 -c "import main; print(\"OK\")" > /tmp/out.log 2> /tmp/err.log
         if grep -q OK /tmp/out.log; then
-          exec uvicorn main:app --host 0.0.0.0 --port 5000
+          exec uvicorn main:app --host 0.0.0.0 --port 80
         else
           echo "FAILED:" && cat /tmp/err.log && cat /tmp/out.log && sleep 3600
         fi
       '
     ports:
-      - "5000:5000"
+      - "80:80"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://openrouter.ai/api/v1}
