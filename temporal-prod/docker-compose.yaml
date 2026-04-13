@@ -53,7 +53,7 @@ services:
       - NODE_ENV=production
       - TEMPORAL_ADDRESS=temporal:7233
       - TEMPORAL_NAMESPACE=default
-      - DATABASE_URL=postgres://temporal:temporal123@postgres:5432/temporal
+      - DATABASE_URL=postgres://temporal:temporal123@factory-postgres:5432/temporal
       - DASHBOARD_USER=admin
       - DASHBOARD_PASS=factory2026
       - MEM0_BASE_URL=http://mem0:5000
