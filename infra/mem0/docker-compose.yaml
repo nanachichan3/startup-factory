@@ -23,18 +23,20 @@ services:
     image: ghcr.io/nanachichan3/mem0:v7
     container_name: factory-mem0
     restart: unless-stopped
-    # Override: run in background, capture crash, then sleep forever
+    profiles:
+      - default
     command: >
       sh -c "
         cd /app &&
-        python3 -c '
+        (timeout 5 python3 -c '
 import sys; 
 sys.stdout.flush()
 import main
 print(\"Import OK\", flush=True)
-' 2>&1 | tee /tmp/startup.log ;
-        echo 'Startup log captured, sleeping for inspection...' ;
-        sleep 36000
+' 2>&1 || true) > /tmp/startup.log ;
+        cat /tmp/startup.log ;
+        echo '---';
+        uvicorn main:app --host 0.0.0.0 --port 5000
       "
     ports:
       - "5000:5000"
