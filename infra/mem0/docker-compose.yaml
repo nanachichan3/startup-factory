@@ -19,22 +19,6 @@ services:
       - "traefik.http.routers.mem0.tls.certresolver=letsencrypt"
     healthcheck:
       disable: true
-    command:
-      - sh
-      - -c
-      - >
-        (python3 -c "
-import sys
-sys.stderr = open('/tmp/err.log', 'w')
-sys.stdout = open('/tmp/out.log', 'w')
-import main
-print('IMPORT_OK', flush)
-" 2>&1 || true);
-        cat /tmp/out.log;
-        cat /tmp/err.log;
-        if grep -q IMPORT_OK /tmp/out.log 2>/dev/null;
-        then exec uvicorn main:app --host 0.0.0.0 --port 5000;
-        else sleep 36000; fi
 
 volumes:
   mem0_data:
