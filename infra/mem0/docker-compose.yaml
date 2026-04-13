@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   mem0:
-    image: mem0ai/mem0-api-server:latest
+    image: mem0ai/mem0:latest
     container_name: factory-mem0
     restart: unless-stopped
     ports:
