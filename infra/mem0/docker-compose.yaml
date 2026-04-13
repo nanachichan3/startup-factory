@@ -4,7 +4,7 @@ services:
   mem0:
     image: ghcr.io/nanachichan3/mem0:v6
     container_name: factory-mem0
-    restart: unless-stopped
+    # restart: unless-stopped  # disabled for debug
     ports:
       - "8010:5000"
     environment:
@@ -22,13 +22,14 @@ services:
     depends_on:
       mem0-postgres:
         condition: service_healthy
+    # restart: unless-stopped
     networks:
       - osmqw04ftbdhud2cxp3e9s3p
 
   mem0-postgres:
     image: ankane/pgvector:latest
     container_name: mem0-postgres
-    restart: unless-stopped
+    # restart: unless-stopped  # disabled for debug
     environment:
       POSTGRES_DB: mem0
       POSTGRES_USER: postgres
@@ -40,6 +41,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    # restart: unless-stopped
     networks:
       - osmqw04ftbdhud2cxp3e9s3p
 
