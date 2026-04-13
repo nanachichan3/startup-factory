@@ -21,6 +21,25 @@ services:
       - "traefik.http.routers.mem0.tls.certresolver=letsencrypt"
     healthcheck:
       disable: true
+    command:
+      - sh
+      - -c
+      - >
+        python3 -c "
+import sys
+sys.stderr = open('/tmp/uvicorn_err.log', 'w')
+sys.stdout = open('/tmp/uvicorn_out.log', 'w')
+import main
+" 2>&1 | tee /tmp/startup_err.log;
+        cat /tmp/startup_err.log;
+        if grep -q "Traceback" /tmp/startup_err.log 2>/dev/null; then
+          echo 'Import FAILED, sleeping for debug...';
+          tail -100 /tmp/startup_err.log;
+          sleep 36000;
+        else
+          echo 'Import OK, starting uvicorn...';
+          exec uvicorn main:app --host 0.0.0.0 --port 5000 --reload;
+        fi
 
 volumes:
   mem0_data:
