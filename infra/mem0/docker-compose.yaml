@@ -1,6 +1,24 @@
 version: '3.8'
 
 services:
+  mem0-postgres:
+    image: ankane/pgvector:latest
+    container_name: mem0-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mem0
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - mem0_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mem0"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - osmqw04ftbdhud2cxp3e9s3p
+
   mem0:
     image: ghcr.io/nanachichan3/mem0:v7
     container_name: factory-mem0
@@ -10,9 +28,26 @@ services:
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://openrouter.ai/api/v1}
+      - POSTGRES_HOST=mem0-postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=mem0
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_COLLECTION_NAME=memories
       - HISTORY_DB_PATH=/app/history/memory.db
     volumes:
       - mem0_history:/app/history
+    depends_on:
+      mem0-postgres:
+        condition: service_healthy
+    networks:
+      - osmqw04ftbdhud2cxp3e9s3p
 
 volumes:
+  mem0_pgdata:
   mem0_history:
+
+networks:
+  osmqw04ftbdhud2cxp3e9s3p:
+    name: osmqw04ftbdhud2cxp3e9s3p
+    driver: bridge
