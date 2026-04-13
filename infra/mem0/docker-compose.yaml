@@ -26,18 +26,23 @@ services:
     profiles:
       - default
     command: >
-      sh -c "
-        cd /app &&
-        (timeout 5 python3 -c '
-import sys; 
+      sh -c '
+        cd /app
+        python3 -c "
+import sys
 sys.stdout.flush()
 import main
-print(\"Import OK\", flush=True)
-' 2>&1 || true) > /tmp/startup.log ;
-        cat /tmp/startup.log ;
-        echo '---';
-        uvicorn main:app --host 0.0.0.0 --port 5000
-      "
+print(\"IMPORT_SUCCESS\", flush=True)
+" 2>&1 | tee /tmp/startup.log
+        if grep -q IMPORT_SUCCESS /tmp/startup.log; then
+          echo "Mem0 import OK, starting server..."
+          exec uvicorn main:app --host 0.0.0.0 --port 5000
+        else
+          echo "Mem0 import FAILED, sleeping for debug..."
+          tail /tmp/startup.log
+          sleep 36000
+        fi
+      '
     ports:
       - "5000:5000"
     environment:
