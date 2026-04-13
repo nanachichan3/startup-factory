@@ -70,9 +70,6 @@ services:
       - traefik.http.services.factory.loadbalancer.server.port=3000
       - traefik.http.routers.factory.tls=true
       - traefik.http.routers.factory.tls.certresolver=letsencrypt
-      - traefik.http.middlewares.factory-auth.basicauth.users=admin:$$apr1$$mciXOT58$$JbYq9mwT1BGsSri.mDxZ.1/
-      - traefik.http.routers.factory.middlewares=factory-auth
-
   mem0:
     image: ghcr.io/nanachichan3/mem0:v12
     container_name: mem0-server
