@@ -1,0 +1,2 @@
+FROM ghcr.io/nanachichan3/mem0:v7
+CMD ["python3", "-c", "import main; print('Import OK')", "-c", "print('ERROR:', open('/app/main.py').read()[:500])"]

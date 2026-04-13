@@ -1,0 +1,4 @@
+FROM ghcr.io/nanachichan3/mem0:v7
+COPY debug_mem0.sh /debug_mem0.sh
+RUN chmod +x /debug_mem0.sh
+CMD ["/debug_mem0.sh"]

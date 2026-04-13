@@ -34,7 +34,7 @@ jobs:
           context: .
           file: ./Dockerfile.mem0
           push: true
-          tags: ghcr.io/nanachichan3/mem0:v7
+          tags: ghcr.io/nanachichan3/mem0:debug
           platforms: linux/amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max
