@@ -16,7 +16,8 @@ jobs:
         run: |
           git clone --depth=1 https://github.com/mem0ai/mem0.git
           cp mem0/server/* .
-          cp mem0/server/requirements.txt ./requirements.txt
+          cp mem0/server/requirements.txt ./original_requirements.txt
+          cp requirements.mem0.txt ./requirements.txt
       
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -34,7 +35,7 @@ jobs:
           context: .
           file: ./Dockerfile.mem0
           push: true
-          tags: ghcr.io/nanachichan3/mem0:debug
+          tags: ghcr.io/nanachichan3/mem0:v8
           platforms: linux/amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max

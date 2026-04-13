@@ -8,11 +8,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 COPY requirements.txt .
+RUN pip install --no-cache-dir psycopg[binary]>=3.2.0
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Patch: use Python to remove neo4j graph_store from DEFAULT_CONFIG
+# Patch: use Python to:
+# 1. Remove neo4j graph_store from DEFAULT_CONFIG
+# 2. Replace pgvector vector_store with chroma (local file-based)
 COPY patch_memory.py /tmp/patch_memory.py
 RUN python3 /tmp/patch_memory.py
 
