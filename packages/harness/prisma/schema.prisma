@@ -18,16 +18,6 @@ datasource db {
 // ============================================================================
 
 /// @nc.enum.color(#8888ff)
-enum LifecycleStage {
-  Ideation
-  Validation
-  Prototype
-  MVP
-  Growth
-  Scale
-  Optimize
-  Exit
-}
 
 /// @nc.enum.color(#00cc66)
 enum AgentStatus {
@@ -66,7 +56,7 @@ model Startup {
   name           String
   description    String
   founderBrief   String         @default("")
-  stage          LifecycleStage @default(Ideation)
+  stage          String @default("idea")
 
   currentWorkflowId String?
   lastExecutedAt   DateTime?
@@ -101,8 +91,8 @@ model Artifact {
 model LifecycleEvent {
   id         String         @id @default(cuid())
   startupId  String
-  fromStage  LifecycleStage?
-  toStage    LifecycleStage
+  fromStage  String?
+  toStage    String
   eventType  String
   metadata   Json?
   createdAt  DateTime       @default(now())
@@ -133,7 +123,7 @@ model AgentAssignment {
   id          String           @id @default(cuid())
   agentId     String
   startupId   String
-  stage       LifecycleStage
+  stage       String
   status      AssignmentStatus @default(pending)
   notes       String?          @db.Text
   assignedAt  DateTime         @default(now())
