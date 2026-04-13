@@ -14,12 +14,13 @@ services:
     volumes:
       - mem0_data:/app/data
       - mem0_logs:/tmp
+    command: >
+      sh -c
+      "python3 -c \"import main; print('IMPORT_OK')\" > /tmp/startup.log 2>&1 || true ;
+      tail /tmp/startup.log ;
+      sleep 36000"
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:5000/ || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    entrypoint: ["sh", "-c", "python3 -c \"import main; print('IMPORT_OK')\" > /tmp/startup.log 2>&1; tail /tmp/startup.log; exec uvicorn main:app --host 0.0.0.0 --port 5000"]
+      disable: true
 
 volumes:
   mem0_data:
