@@ -6,7 +6,7 @@ services:
     container_name: factory-mem0
     restart: unless-stopped
     ports:
-      - "5000:8000"
+      - "8000:5000"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://openrouter.ai/api/v1}
@@ -24,12 +24,6 @@ services:
         condition: service_healthy
     networks:
       - osmqw04ftbdhud2cxp3e9s3p
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.mem0.rule=Host(`osmqw04ftbdhud2cxp3e9s3p.qed.quest`)"
-      - "traefik.http.services.mem0.loadbalancer.server.port=8000"
-      - "traefik.http.middlewares.mem0-auth.basicauth.users=admin:$$apr1$$r4Z7vUZO$$H.Vc5nF.bQAVnKzJQ5D2M/"
-      - "traefik.http.routers.mem0.middlewares=mem0-auth"
 
   mem0-postgres:
     image: ankane/pgvector:latest
