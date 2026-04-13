@@ -22,8 +22,32 @@ services:
       - "traefik.http.routers.mem0.tls.certresolver=letsencrypt"
     healthcheck:
       disable: true
-    # Override command to just test import
-    entrypoint: ["python3", "/test_import.py"]
+    entrypoint:
+      - sh
+      - -c
+      - >
+        python3 -c "
+import sys
+sys.stdout.flush()
+try:
+    import main
+    with open('/tmp/startup_status.txt', 'w') as f:
+        f.write('IMPORT_OK')
+except Exception as e:
+    with open('/tmp/startup_error.txt', 'w') as f:
+        f.write(str(e))
+    import traceback
+    with open('/tmp/startup_trace.txt', 'w') as f:
+        f.write(traceback.format_exc())
+" 2>&1 | tee /tmp/startup.log;
+        cat /tmp/startup.log;
+        if grep -q IMPORT_OK /tmp/startup_status.txt 2>/dev/null; then
+          exec uvicorn main:app --host 0.0.0.0 --port 5000;
+        else
+          echo 'Import failed, sleeping for debug...';
+          cat /tmp/startup_error.txt /tmp/startup_trace.txt 2>/dev/null;
+          sleep 36000;
+        fi
 
 volumes:
   mem0_data:
