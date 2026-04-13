@@ -21,10 +21,6 @@ services:
       - "traefik.http.routers.mem0.tls.certresolver=letsencrypt"
     healthcheck:
       disable: true
-    command:
-      - sh
-      - -c
-      - "python3 -c \"import main; print('IMPORT_OK')\" > /tmp/startup.log 2>&1 || true; tail /tmp/startup.log; sleep 36000"
 
 volumes:
   mem0_data:
