@@ -2,6 +2,9 @@ import { Request, Response } from 'express';
 import { prisma, STARTUP_STAGES, isDatabaseHealthy, initializeDatabase } from '../../db/client.js';
 import { temporalCloud } from '../../temporal/cloud.js';
 
+// Map API stage strings to Prisma enum values
+const STAGE_TO_ENUM = { idea: 'Ideation', validation: 'Validation', mvp: 'Prototype', launch: 'Growth', distribution: 'Scale', pmf: 'Optimize', support: 'Support', exit: 'Exit' } as const;
+
 // In-memory storage for demo mode (when no database is available)
 interface DemoStartup {
   id: string;
@@ -37,7 +40,8 @@ export async function createStartup(req: Request, res: Response): Promise<void> 
       return;
     }
 
-    const validStage = stage && STARTUP_STAGES.includes(stage) ? stage : 'idea';
+    const validStage = (stage && STARTUP_STAGES.includes(stage) ? stage : 'idea') as keyof typeof STAGE_TO_ENUM;
+    const enumStage = STAGE_TO_ENUM[validStage];
 
     if (isDemoMode || !prisma) {
       // Demo mode - use in-memory storage
@@ -46,7 +50,7 @@ export async function createStartup(req: Request, res: Response): Promise<void> 
         name,
         description,
         founderBrief: founderBrief || '',
-        stage: validStage,
+        stage: enumStage as any,
         currentWorkflowId: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -66,7 +70,7 @@ export async function createStartup(req: Request, res: Response): Promise<void> 
         name,
         description,
         founderBrief: founderBrief || '',
-        stage: validStage
+        stage: enumStage as any
       }
     });
 
@@ -211,11 +215,12 @@ export async function updateStartupStage(req: Request, res: Response): Promise<v
     }
 
     const previousStage = currentStartup.stage;
+    const enumNewStage = STAGE_TO_ENUM[stage as keyof typeof STAGE_TO_ENUM];
 
     // Update startup
     const startup = await prisma.startup.update({
       where: { id },
-      data: { stage }
+      data: { stage: enumNewStage as any }
     });
 
     // Record lifecycle event
@@ -223,9 +228,9 @@ export async function updateStartupStage(req: Request, res: Response): Promise<v
       data: {
         startupId: id,
         fromStage: previousStage,
-        toStage: stage,
+        toStage: enumNewStage as any,
         eventType: 'stage_advance',
-        metadata: { previousStage, newStage: stage }
+        metadata: { previousStage, newStage: enumNewStage }
       }
     });
 
