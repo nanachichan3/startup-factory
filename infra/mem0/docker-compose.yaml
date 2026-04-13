@@ -2,13 +2,25 @@ version: '3.8'
 
 services:
   mem0:
-    image: nginx:alpine
+    image: ghcr.io/nanachichan3/mem0:v6
     container_name: factory-mem0
     restart: unless-stopped
-    ports:
-      - "8010:80"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://openrouter.ai/api/v1}
+      - HISTORY_DB_PATH=/app/history/memory.db
+    volumes:
+      - mem0_history:/app/history
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mem0.rule=Host(`osmqw04ftbdhud2cxp3e9s3p.qed.quest`)"
+      - "traefik.http.services.mem0.loadbalancer.server.port=5000"
+      - "traefik.http.routers.mem0.tls=true"
     networks:
       - osmqw04ftbdhud2cxp3e9s3p
+
+volumes:
+  mem0_history:
 
 networks:
   osmqw04ftbdhud2cxp3e9s3p:
