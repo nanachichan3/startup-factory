@@ -13,14 +13,19 @@ services:
       - HISTORY_DB_PATH=/app/history/memory.db
     volumes:
       - mem0_data:/app/data
-      - mem0_logs:/tmp
+    networks:
+      - coolify
+    healthcheck:
+      disable: true
     command:
       - sh
       - -c
       - "python3 -c \"import main; print('IMPORT_OK')\" > /tmp/startup.log 2>&1 || true; tail /tmp/startup.log; sleep 36000"
-    healthcheck:
-      disable: true
 
 volumes:
   mem0_data:
-  mem0_logs:
+
+networks:
+  coolify:
+    name: coolify
+    external: true
