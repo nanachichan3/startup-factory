@@ -1,9 +1,5 @@
 version: '3.8'
 
-networks:
-  factory-network:
-    driver: bridge
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -23,27 +19,30 @@ services:
     ports:
       - "5433:5432"
     networks:
-      - factory-network
+      factory-network:
+        aliases:
+          - postgres
 
   temporal:
     image: temporalio/auto-setup:1.25.0
     container_name: factory-temporal
     restart: unless-stopped
-    ports:
-      - "7234:7233"
-      - "8088:8080"
     environment:
       - DB=postgres12
       - DB_PORT=5432
       - POSTGRES_USER=temporal
-      - POSTGRES_PWD=temporal123
+      - POSTGRES_PASSWORD=temporal123
       - POSTGRES_SEEDS=postgres
-      - POSTGRES_DB=temporal
+      - ENABLE_ES=true
+      - DEPLOY_MODE=development
+    ports:
+      - "7234:7233"
+      - "8088:8080"
+    networks:
+      - factory-network
     depends_on:
       postgres:
         condition: service_healthy
-    networks:
-      - factory-network
 
   factory:
     image: ghcr.io/nanachichan3/startup-factory:latest
@@ -54,65 +53,45 @@ services:
       - NODE_ENV=production
       - TEMPORAL_ADDRESS=temporal:7233
       - TEMPORAL_NAMESPACE=default
-      - DATABASE_URL=postgres://temporal:temporal123@factory-postgres:5432/temporal
+      - DATABASE_URL=postgres://temporal:temporal123@postgres:5432/temporal
       - DASHBOARD_USER=admin
       - DASHBOARD_PASS=factory2026
-      - MEM0_BASE_URL=http://factory-mem0:8000
-      - MEM0_API_KEY=${OPENAI_API_KEY}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-    depends_on:
-      - temporal
-      - mem0-postgres
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.factory.rule=Host(`startup-factory.qed.quest`)"
-      - "traefik.http.services.factory.loadbalancer.server.port=3000"
-      - "traefik.http.routers.factory.tls=true"
-      - "traefik.http.routers.factory.tls.certresolver=letsencrypt"
-      - "traefik.http.middlewares.factory-auth.basicauth.users=admin:$$apr1$$r4Z7vUZO$$H.Vc5nF.bQAVnKzJQ5D2M/"
+      - MEM0_BASE_URL=http://mem0:5000
     networks:
       - factory-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.factory.rule=Host(`startup-factory.qed.quest`)
+      - traefik.http.services.factory.loadbalancer.server.port=3000
+      - traefik.http.routers.factory.tls=true
+      - traefik.http.routers.factory.tls.certresolver=letsencrypt
+      - traefik.http.middlewares.factory-auth.basicauth.users=admin:$$apr1$$r4Z7vUZO$$H.Vc5nF.bQAVnKzJQ5D2M/
+      - traefik.http.routers.factory.middlewares=factory-auth
 
   mem0:
-    image: ghcr.io/nanachichan3/mem0:v6
-    container_name: factory-mem0
+    image: ghcr.io/nanachichan3/mem0:v12
+    container_name: mem0-server
     restart: unless-stopped
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://openrouter.ai/api/v1}
-      - POSTGRES_HOST=mem0-postgres
-      - POSTGRES_PORT=5432
-      - POSTGRES_DB=mem0
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_COLLECTION_NAME=memories
-    volumes:
-      - mem0_history:/app/history
-    depends_on:
-      mem0-postgres:
-        condition: service_healthy
     networks:
       - factory-network
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.mem0.rule=Host(`osmqw04ftbdhud2cxp3e9s3p.qed.quest`)
+      - traefik.http.services.mem0.loadbalancer.server.port=5000
+      - traefik.http.routers.mem0.tls=true
+      - traefik.http.routers.mem0.tls.certresolver=letsencrypt
 
-  mem0-postgres:
-    image: ankane/pgvector:latest
-    container_name: mem0-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: mem0
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    volumes:
-      - mem0_pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d mem0"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    networks:
-      - factory-network
+networks:
+  factory-network:
+    driver: bridge
 
 volumes:
   postgres_data:
-  mem0_history:
-  mem0_pgdata:
