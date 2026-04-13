@@ -3,6 +3,7 @@ import { prisma, STARTUP_STAGES, isDatabaseHealthy, initializeDatabase } from '.
 import { temporalCloud } from '../../temporal/cloud.js';
 
 // Map API stage strings to Prisma enum values
+// xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 const STAGE_TO_ENUM = { idea: 'Ideation', validation: 'Validation', mvp: 'Prototype', launch: 'Growth', distribution: 'Scale', pmf: 'Optimize', support: 'Support', exit: 'Exit' } as const;
 
 // In-memory storage for demo mode (when no database is available)
