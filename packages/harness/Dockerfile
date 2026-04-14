@@ -3,15 +3,15 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files (from packages/harness context = ./packages/harness)
+# Copy package files (context is repo root)
 COPY package*.json ./
 
 # Install all dependencies
 RUN npm install --legacy-peer-deps --no-fund --no-audit
 
-# Copy source and prisma schema
-COPY src ./src
-COPY prisma ./prisma
+# Copy source and prisma schema (context is repo root)
+COPY packages/harness/src ./src
+COPY packages/harness/prisma ./prisma
 
 # Generate Prisma client
 RUN DATABASE_URL=postgresql://dummy npx prisma generate --schema=./prisma/schema.prisma
