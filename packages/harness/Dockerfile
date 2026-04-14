@@ -19,7 +19,6 @@ ARG REDIS_HOST
 ARG DISCORD_BOT_TOKEN
 ARG FACTORY_API_URL
 ARG COOLIFY_FQDN
-ENV DATABASE_URL=${DATABASE_URL:-}
 ENV NODE_ENV=production
 
 WORKDIR /app
@@ -27,22 +26,19 @@ WORKDIR /app
 # Copy package files (context is repo root)
 COPY package*.json ./
 
-# Debug: check what node/npm versions we have
-RUN node --version && npm --version
+# Install ALL dependencies (including dev — prisma CLI needs devDeps)
+# --include=dev ensures devDependencies are installed even with NODE_ENV=production
+RUN npm install --include=dev --legacy-peer-deps --no-fund --no-audit
 
-# Install ALL dependencies (including dev — needed for prisma CLI + typescript)
-# Use --include=dev to ensure devDependencies are installed even with NODE_ENV=production
-RUN npm install --legacy-peer-deps --include=dev --no-fund --no-audit
-
-# Debug: verify prisma binary exists
-RUN ls node_modules/.bin/ | grep prisma || (echo "PRISMA NOT FOUND"; ls node_modules/ | head -20)
+# Show what binaries are available
+RUN ls node_modules/.bin/ | head -20
 
 # Copy source and prisma schema
 COPY packages/harness/src ./src
 COPY packages/harness/prisma ./prisma
 
-# Generate Prisma client (DATABASE_URL can be dummy — no real connection needed)
-RUN DATABASE_URL=${DATABASE_URL:-postgresql://dummy} ./node_modules/.bin/prisma generate --schema=./prisma/schema.prisma
+# Generate Prisma client — use npx to ensure correct binary resolution
+RUN DATABASE_URL=${DATABASE_URL:-postgresql://dummy} npx -y prisma@5.22.0 generate --schema=./prisma/schema.prisma
 
 # Build TypeScript
 RUN ./node_modules/.bin/tsc --project ./packages/harness/tsconfig.json
