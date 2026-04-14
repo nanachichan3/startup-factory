@@ -26,9 +26,11 @@ WORKDIR /app
 # Copy package files (context is repo root)
 COPY package*.json ./
 
-# Install ALL dependencies (including dev — prisma CLI needs devDeps)
-# --include=dev ensures devDependencies are installed even with NODE_ENV=production
-RUN npm install --include=dev --legacy-peer-deps --no-fund --no-audit
+# Install TypeScript globally (ensures tsc is always available regardless of workspace issues)
+RUN npm install -g typescript@5.9.3 --no-fund --no-audit
+
+# Install all workspace dependencies
+RUN npm install --legacy-peer-deps --no-fund --no-audit
 
 # Show what binaries are available
 RUN ls node_modules/.bin/ | head -20
@@ -40,8 +42,8 @@ COPY packages/harness/prisma ./prisma
 # Generate Prisma client — use npx to ensure correct binary resolution
 RUN DATABASE_URL=${DATABASE_URL:-postgresql://dummy} npx -y prisma@5.22.0 generate --schema=./prisma/schema.prisma
 
-# Build TypeScript
-RUN ./node_modules/.bin/tsc --project ./packages/harness/tsconfig.json
+# Build TypeScript (uses globally installed tsc)
+RUN tsc --project ./packages/harness/tsconfig.json
 
 # Production image
 FROM node:22-alpine
