@@ -13,6 +13,9 @@ RUN npm install --legacy-peer-deps
 COPY src ./src
 COPY prisma ./prisma
 
+# Generate Prisma client BEFORE TypeScript compilation
+RUN npx prisma generate --schema=./prisma/schema.prisma
+
 # Build TypeScript
 RUN npm run build
 
@@ -27,9 +30,12 @@ COPY package*.json ./
 # Install production dependencies only
 RUN npm install --production --legacy-peer-deps
 
+# Copy Prisma client (needed at runtime for migrations)
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+
 # Copy built artifacts from builder
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
