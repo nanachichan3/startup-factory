@@ -6,35 +6,39 @@ WORKDIR /app
 # Copy package files (from packages/harness context)
 COPY package*.json ./
 
-# Install all dependencies (including devDependencies for typescript, prisma)
-RUN npm install --legacy-peer-deps
+# Install all dependencies
+RUN npm install --legacy-peer-deps --no-fund --no-audit 2>&1 | tail -5
+
+# Install TypeScript globally (handles any hoisting issues)
+RUN npm install -g typescript --no-fund --no-audit 2>&1 | tail -3
+
+# Verify tsc is available
+RUN tsc --version
 
 # Copy source and prisma schema
 COPY src ./src
 COPY prisma ./prisma
 
-# Generate Prisma client (needs DATABASE_URL but not real connection)
-RUN DATABASE_URL=postgresql://dummy npx prisma generate --schema=./prisma/schema.prisma
+# Generate Prisma client
+RUN DATABASE_URL=postgresql://dummy npx prisma generate --schema=./prisma/schema.prisma 2>&1 | tail -3
 
-# Build TypeScript using npx (downloads tsc if not in node_modules)
-RUN npx tsc --project ./tsconfig.json
+# Build TypeScript
+RUN tsc --project ./tsconfig.json
 
 # Production image
 FROM node:22-alpine
 
 WORKDIR /app
 
-# Copy package files for production deps
+# Copy package files and install production deps only
 COPY package*.json ./
-
-# Install production dependencies only
-RUN npm install --production --legacy-peer-deps
+RUN npm install --production --legacy-peer-deps --no-fund --no-audit
 
 # Copy Prisma client from builder
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
-# Copy built artifacts
+# Copy compiled app
 COPY --from=builder /app/dist ./dist
 
 # Create non-root user
