@@ -1,10 +1,9 @@
-# Production runtime only — dist is pre-compiled and committed to git
-# node_modules/.prisma is copied from the builder stage
+# Builder stage
 FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files (from packages/harness context)
+# Copy package files (from packages/harness context = ./packages/harness)
 COPY package*.json ./
 
 # Install all dependencies
@@ -14,11 +13,11 @@ RUN npm install --legacy-peer-deps --no-fund --no-audit
 COPY src ./src
 COPY prisma ./prisma
 
-# Generate Prisma client (creates node_modules/.prisma)
+# Generate Prisma client
 RUN DATABASE_URL=postgresql://dummy npx prisma generate --schema=./prisma/schema.prisma
 
-# Copy pre-compiled TypeScript output (committed to git)
-COPY dist ./dist
+# Copy pre-compiled TypeScript output (committed to git under packages/harness/dist)
+COPY packages/harness/dist ./dist
 
 # Production image
 FROM node:22-alpine
