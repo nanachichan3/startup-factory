@@ -9,21 +9,19 @@ COPY package*.json ./
 # Install all dependencies
 RUN npm install --legacy-peer-deps --no-fund --no-audit 2>&1 | tail -5
 
-# Install TypeScript globally (handles any hoisting issues)
-RUN npm install -g typescript --no-fund --no-audit 2>&1 | tail -3
-
-# Verify tsc is available
-RUN tsc --version
-
 # Copy source and prisma schema
 COPY src ./src
 COPY prisma ./prisma
 
-# Generate Prisma client
-RUN DATABASE_URL=postgresql://dummy npx prisma generate --schema=./prisma/schema.prisma 2>&1 | tail -3
+# Copy pre-compiled dist (from workspace, committed to git)
+# This avoids needing TypeScript in Docker build at all
+COPY dist ./dist
 
-# Build TypeScript
-RUN tsc --project ./tsconfig.json
+# Generate Prisma client (needed at runtime)
+# We need @prisma/client in node_modules of the runtime image
+# Since npm install in production stage won't have prisma dev deps,
+# we copy the .prisma folder explicitly
+COPY node_modules/.prisma ./node_modules/.prisma 2>/dev/null || echo "no .prisma to copy"
 
 # Production image
 FROM node:22-alpine
@@ -34,11 +32,11 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install --production --legacy-peer-deps --no-fund --no-audit
 
-# Copy Prisma client from builder
+# Copy Prisma client (generated during local build)
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma 2>/dev/null || echo "no @prisma to copy"
 
-# Copy compiled app
+# Copy pre-compiled TypeScript output
 COPY --from=builder /app/dist ./dist
 
 # Create non-root user
