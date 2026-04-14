@@ -1,4 +1,4 @@
-# Builder stage
+# Minimal builder stage — just to hold node_modules/.prisma
 FROM node:22-alpine AS builder
 
 WORKDIR /app
@@ -6,18 +6,14 @@ WORKDIR /app
 # Copy package files (context is repo root)
 COPY package*.json ./
 
-# Install all dependencies
+# Install dependencies (prisma + client needed for generate)
 RUN npm install --legacy-peer-deps --no-fund --no-audit
 
-# Copy source and prisma schema (context is repo root)
-COPY packages/harness/src ./src
+# Copy prisma schema
 COPY packages/harness/prisma ./prisma
 
-# Generate Prisma client
+# Generate Prisma client (needed for runtime)
 RUN DATABASE_URL=postgresql://dummy npx prisma generate --schema=./prisma/schema.prisma
-
-# Copy pre-compiled TypeScript output (committed to git under packages/harness/dist)
-COPY packages/harness/dist ./dist
 
 # Production image
 FROM node:22-alpine
@@ -32,8 +28,8 @@ RUN npm install --production --legacy-peer-deps --no-fund --no-audit
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
-# Copy pre-compiled TypeScript output
-COPY --from=builder /app/dist ./dist
+# Copy pre-compiled TypeScript output (committed to git)
+COPY packages/harness/dist ./dist
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
