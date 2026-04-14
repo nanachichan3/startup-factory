@@ -26,17 +26,16 @@ WORKDIR /app
 # Install OpenSSL + required runtime libs (needed for Prisma's native binaries)
 RUN apk add --no-cache openssl python3 make g++
 
-# Copy package files (context is repo root)
+# Copy ALL package files first (root + all workspaces)
 COPY package*.json ./
 
-# Install TypeScript globally FIRST (avoids workspace binary issues)
-RUN npm install -g typescript@5.9.3 --no-fund --no-audit
-
-# Install all workspace dependencies (including devDeps)
+# Install workspace deps in each package (npm workspaces might not auto-install in Docker)
 RUN npm install --legacy-peer-deps --no-fund --no-audit
+RUN npm install --legacy-peer-deps --no-fund --no-audit --prefix ./packages/harness
 
-# Verify binaries are available
-RUN ls node_modules/.bin/ | head -30
+# Verify tsc is available
+RUN ls node_modules/.bin/ | grep tsc || echo "tsc not in root .bin"
+RUN ls packages/harness/node_modules/.bin/ | grep tsc || echo "tsc not in harness .bin"
 
 # Copy source and prisma schema
 COPY packages/harness/src ./src
@@ -45,8 +44,10 @@ COPY packages/harness/prisma ./prisma
 # Generate Prisma client with OpenSSL available
 RUN DATABASE_URL=${DATABASE_URL:-postgresql://dummy} npx -y prisma@5.22.0 generate --schema=./prisma/schema.prisma
 
-# Build TypeScript
-RUN tsc --project ./packages/harness/tsconfig.json
+# Build TypeScript using workspace-local tsc
+RUN ./node_modules/.bin/tsc --project ./packages/harness/tsconfig.json || \
+    ./packages/harness/node_modules/.bin/tsc --project ./packages/harness/tsconfig.json || \
+    $(npm root -g)/.bin/tsc --project ./packages/harness/tsconfig.json
 
 # Production image
 FROM node:22-alpine
@@ -76,6 +77,7 @@ ENV NODE_ENV=production
 # Copy package files and install production deps only
 COPY package*.json ./
 RUN npm install --production --legacy-peer-deps --no-fund --no-audit
+RUN npm install --production --legacy-peer-deps --no-fund --no-audit --prefix ./packages/harness
 
 # Copy generated Prisma client from builder
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
