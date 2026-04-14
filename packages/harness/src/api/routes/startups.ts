@@ -394,7 +394,7 @@ export async function healthCheck(_req: Request, res: Response): Promise<void> {
 
   res.json({ 
     status, 
-    service: 'startup-factory-api',
+    service: 'startup-factory-harness',
     timestamp: new Date().toISOString(),
     mode: (!prisma || !(await isDatabaseHealthy())) ? 'demo' : 'production',
     dependencies: {
