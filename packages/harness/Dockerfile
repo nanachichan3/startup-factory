@@ -6,18 +6,18 @@ WORKDIR /app
 # Copy package files (from packages/harness context)
 COPY package*.json ./
 
-# Install all dependencies
+# Install all dependencies (including devDependencies for typescript, prisma)
 RUN npm install --legacy-peer-deps
 
 # Copy source and prisma schema
 COPY src ./src
 COPY prisma ./prisma
 
-# Generate Prisma client (needs DATABASE_URL env var set)
-RUN DATABASE_URL=postgresql://dummy ./node_modules/.bin/prisma generate --schema=./prisma/schema.prisma
+# Generate Prisma client (needs DATABASE_URL but not real connection)
+RUN DATABASE_URL=postgresql://dummy npx prisma generate --schema=./prisma/schema.prisma
 
-# Build TypeScript explicitly
-RUN ./node_modules/.bin/tsc --project ./tsconfig.json
+# Build TypeScript using npx (downloads tsc if not in node_modules)
+RUN npx tsc --project ./tsconfig.json
 
 # Production image
 FROM node:22-alpine
