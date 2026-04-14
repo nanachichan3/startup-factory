@@ -3,11 +3,11 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
+# Copy package files (from packages/harness context)
 COPY package*.json ./
 
-# Install all dependencies (including dev for build)
-RUN npm ci
+# Install all dependencies
+RUN npm install --legacy-peer-deps
 
 # Copy source and prisma schema
 COPY src ./src
@@ -24,8 +24,8 @@ WORKDIR /app
 # Copy package files for production deps
 COPY package*.json ./
 
-# Install production dependencies only (no dev dependencies)
-RUN npm ci --production
+# Install production dependencies only
+RUN npm install --production --legacy-peer-deps
 
 # Copy built artifacts from builder
 COPY --from=builder /app/dist ./dist

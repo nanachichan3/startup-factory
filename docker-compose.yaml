@@ -1,63 +1,6 @@
 version: '3.8'
 
 services:
-  # Temporal Workflow Engine
-  temporal:
-    image: temporalio/auto-setup:1.22.0
-    container_name: startup-factory-temporal
-    ports:
-      - "7234:7233"   # GRPC port
-      - "8234:8233"   # HTTP port
-    environment:
-      - DB=postgresql
-      - DB_PORT=5432
-      - POSTGRES_USER=postgres
-      - POSTGRES_PWD=postgres
-      - POSTGRES_SEEDS=postgres
-    depends_on:
-      - postgres
-    networks:
-      - factory-network
-
-  # Temporal Web UI
-  temporal-web:
-    image: temporalio/web:1.22.0
-    container_name: startup-factory-temporal-web
-    ports:
-      - "8235:8080"
-    environment:
-      - TEMPORAL_ADDRESS=temporal:7233
-    depends_on:
-      - temporal
-    networks:
-      - factory-network
-
-  # PostgreSQL Database
-  postgres:
-    image: postgres:15-alpine
-    container_name: startup-factory-postgres
-    ports:
-      - "5433:5432"
-    environment:
-      POSTGRES_DB: startup_factory
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - factory-network
-
-  # Redis Cache
-  redis:
-    image: redis:alpine
-    container_name: startup-factory-redis
-    ports:
-      - "6380:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - factory-network
-
   # Factory API Server
   factory-api:
     build:
@@ -68,18 +11,23 @@ services:
       - "3001:3000"
     environment:
       - NODE_ENV=production
-      - TEMPORAL_ADDRESS=temporal:7233
-      - POSTGRES_HOST=postgres
-      - POSTGRES_DB=startup_factory
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - REDIS_HOST=redis
-    depends_on:
-      - temporal
-      - postgres
-      - redis
+      - TEMPORAL_ADDRESS=${TEMPORAL_ADDRESS:-}
+      - TEMPORAL_NAMESPACE=${TEMPORAL_NAMESPACE:-}
+      - TEMPORAL_API_KEY=${TEMPORAL_API_KEY:-}
+      - DATABASE_URL=${DATABASE_URL:-}
+      - DB_HOST=${DB_HOST:-}
+      - DB_PORT=${DB_PORT:-}
+      - DB_USER=${DB_USER:-}
+      - DB_PASS=${DB_PASS:-}
+      - DB_NAME=${DB_NAME:-}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - DASHBOARD_USER=${DASHBOARD_USER:-admin}
+      - DASHBOARD_PASS=${DASHBOARD_PASS:-password}
+      - REDIS_HOST=${REDIS_HOST:-}
+      - DEMO_MODE=${DEMO_MODE:-false}
     networks:
       - factory-network
+    restart: unless-stopped
 
   # Discord Gateway
   discord-gateway:
@@ -88,7 +36,7 @@ services:
       dockerfile: Dockerfile
     container_name: startup-factory-discord
     environment:
-      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
       - FACTORY_API_URL=http://factory-api:3000
       - DASHBOARD_USER=${DASHBOARD_USER:-admin}
       - DASHBOARD_PASS=${DASHBOARD_PASS:-password}
@@ -97,10 +45,6 @@ services:
     networks:
       - factory-network
     restart: unless-stopped
-
-volumes:
-  postgres_data:
-  redis_data:
 
 networks:
   factory-network:
