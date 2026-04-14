@@ -27,8 +27,15 @@ WORKDIR /app
 # Copy package files (context is repo root)
 COPY package*.json ./
 
+# Debug: check what node/npm versions we have
+RUN node --version && npm --version
+
 # Install ALL dependencies (including dev — needed for prisma CLI + typescript)
-RUN npm install --legacy-peer-deps --no-fund --no-audit
+# Use --include=dev to ensure devDependencies are installed even with NODE_ENV=production
+RUN npm install --legacy-peer-deps --include=dev --no-fund --no-audit
+
+# Debug: verify prisma binary exists
+RUN ls node_modules/.bin/ | grep prisma || (echo "PRISMA NOT FOUND"; ls node_modules/ | head -20)
 
 # Copy source and prisma schema
 COPY packages/harness/src ./src
