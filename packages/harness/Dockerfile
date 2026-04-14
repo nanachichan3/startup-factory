@@ -1,7 +1,7 @@
-# Build stage — generates Prisma client and compiles TypeScript
+# Build stage
 FROM node:22-alpine AS builder
 
-# Declare build args as env vars (Coolify passes them as --build-arg)
+# Declare build args as env vars
 ARG DATABASE_URL
 ARG OPENROUTER_API_KEY
 ARG DASHBOARD_USER
@@ -23,30 +23,28 @@ ENV NODE_ENV=production
 
 WORKDIR /app
 
-# Install OpenSSL + required runtime libs (needed for Prisma's native binaries)
+# Install OpenSSL + build tools (needed for Prisma)
 RUN apk add --no-cache openssl python3 make g++
 
-# Copy ALL package files (root + all workspaces)
-COPY package*.json ./
+# Copy harness package files ONLY
+COPY packages/harness/package*.json ./
 
-# Install root workspace deps + harness workspace deps
-RUN npm install --legacy-peer-deps --no-fund --no-audit
-RUN npm install --legacy-peer-deps --no-fund --no-audit --prefix ./packages/harness
+# Install production deps (includes @prisma/client)
+RUN npm install --production --legacy-peer-deps --no-fund --no-audit
 
-# Show available binaries
-RUN echo "Root .bin:" && ls node_modules/.bin/ | head -20 || echo "none"
-RUN echo "Harness .bin:" && ls packages/harness/node_modules/.bin/ | head -20 || echo "none"
+# Install TypeScript + Prisma devDeps (needed for build only)
+RUN npm install typescript@5.9.3 --save-dev --no-fund --no-audit \
+    && npm install prisma@5.22.0 --save-dev --no-fund --no-audit
 
 # Copy source and prisma schema
 COPY packages/harness/src ./src
 COPY packages/harness/prisma ./prisma
 
-# Generate Prisma client with OpenSSL available
-RUN DATABASE_URL=${DATABASE_URL:-postgresql://dummy} npx -y prisma@5.22.0 generate --schema=./prisma/schema.prisma
+# Generate Prisma client (DATABASE_URL can be dummy)
+RUN DATABASE_URL=${DATABASE_URL:-postgresql://dummy} ./node_modules/.bin/prisma generate --schema=./prisma/schema.prisma
 
-# Build TypeScript using workspace-local tsc (try root first, then harness)
-RUN (./node_modules/.bin/tsc --project ./packages/harness/tsconfig.json 2>&1 || \
-     ./packages/harness/node_modules/.bin/tsc --project ./packages/harness/tsconfig.json 2>&1) && echo "TSC OK" || echo "TSC FAILED"
+# Build TypeScript
+RUN ./node_modules/.bin/tsc --project ./tsconfig.json
 
 # Production image
 FROM node:22-alpine
@@ -73,8 +71,8 @@ ARG FACTORY_API_URL
 ARG COOLIFY_FQDN
 ENV NODE_ENV=production
 
-# Copy package files and install production deps only (@prisma/client gets installed)
-COPY package*.json ./
+# Copy package files and install production deps only
+COPY packages/harness/package*.json ./
 RUN npm install --production --legacy-peer-deps --no-fund --no-audit
 
 # Copy generated Prisma client from builder
@@ -82,7 +80,7 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
 # Copy pre-compiled TypeScript output
-COPY --from=builder /app/packages/harness/dist ./dist
+COPY --from=builder /app/dist ./dist
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
