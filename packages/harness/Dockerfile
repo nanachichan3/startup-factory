@@ -23,26 +23,29 @@ ENV NODE_ENV=production
 
 WORKDIR /app
 
+# Install OpenSSL + required runtime libs (needed for Prisma's native binaries)
+RUN apk add --no-cache openssl python3 make g++
+
 # Copy package files (context is repo root)
 COPY package*.json ./
 
-# Install TypeScript globally (ensures tsc is always available regardless of workspace issues)
+# Install TypeScript globally FIRST (avoids workspace binary issues)
 RUN npm install -g typescript@5.9.3 --no-fund --no-audit
 
-# Install all workspace dependencies
+# Install all workspace dependencies (including devDeps)
 RUN npm install --legacy-peer-deps --no-fund --no-audit
 
-# Show what binaries are available
-RUN ls node_modules/.bin/ | head -20
+# Verify binaries are available
+RUN ls node_modules/.bin/ | head -30
 
 # Copy source and prisma schema
 COPY packages/harness/src ./src
 COPY packages/harness/prisma ./prisma
 
-# Generate Prisma client — use npx to ensure correct binary resolution
+# Generate Prisma client with OpenSSL available
 RUN DATABASE_URL=${DATABASE_URL:-postgresql://dummy} npx -y prisma@5.22.0 generate --schema=./prisma/schema.prisma
 
-# Build TypeScript (uses globally installed tsc)
+# Build TypeScript
 RUN tsc --project ./packages/harness/tsconfig.json
 
 # Production image
