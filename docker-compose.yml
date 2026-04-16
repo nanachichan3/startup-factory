@@ -3,78 +3,66 @@ version: '3.8'
 services:
   # Temporal Workflow Engine
   temporal:
-    image: temporalio/auto-setup:1.22.0
-    container_name: startup-factory-temporal
-    ports:
-      - "7234:7233"   # GRPC port
-      - "8234:8233"   # HTTP port
+    image: temporalio/auto-setup:1.25.0
+    container_name: factory-temporal
+    restart: unless-stopped
     environment:
-      - DB=postgresql
+      - DB=postgres12
       - DB_PORT=5432
-      - POSTGRES_USER=postgres
-      - POSTGRES_PWD=postgres
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=temporal123
       - POSTGRES_SEEDS=postgres
-    depends_on:
-      - postgres
+      - POSTGRES_DB=temporal
     networks:
-      - factory-network
+      - factory-net
 
-  # PostgreSQL Database
+  # PostgreSQL for Temporal
   postgres:
-    image: postgres:15-alpine
-    container_name: startup-factory-postgres
-    ports:
-      - "5433:5432"
+    image: postgres:16-alpine
+    container_name: factory-postgres
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: startup_factory
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: temporal
+      POSTGRES_USER: temporal
+      POSTGRES_PWD: temporal123
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U temporal -d temporal"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     networks:
-      - factory-network
+      - factory-net
 
   # Factory API Server
   factory-api:
     build:
-      context: ./packages/harness
-      dockerfile: Dockerfile
-    container_name: startup-factory-api
-    expose:
-      - "3000"
+      context: .
+      dockerfile: packages/harness/Dockerfile
+    container_name: factory-api
+    restart: unless-stopped
     environment:
       - NODE_ENV=production
       - TEMPORAL_ADDRESS=temporal:7233
-      - POSTGRES_HOST=postgres
-      - POSTGRES_DB=startup_factory
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-    depends_on:
-      - temporal
-      - postgres
+      - TEMPORAL_NAMESPACE=default
+      - DATABASE_URL=postgres://temporal:temporal123@postgres:5432/temporal
+      - DASHBOARD_USER=admin
+      - DASHBOARD_PASS=${DASHBOARD_PASS:-factory2026}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
     networks:
-      - factory-network
-
-  # Discord Gateway
-  discord-gateway:
-    build:
-      context: ./packages/discord-gateway
-      dockerfile: Dockerfile
-    container_name: startup-factory-discord
-    environment:
-      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
-      - FACTORY_API_URL=http://factory-api:3000
-      - DASHBOARD_USER=${DASHBOARD_USER:-admin}
-      - DASHBOARD_PASS=${DASHBOARD_PASS:-password}
-    depends_on:
-      - factory-api
-    networks:
-      - factory-network
-    restart: unless-stopped
+      - factory-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.factory.rule=Host(`startup-factory.qed.quest`)"
+      - "traefik.http.services.factory.loadbalancer.server.port=3000"
+      - "traefik.http.routers.factory.tls=true"
+      - "traefik.http.routers.factory.tls.certresolver=letsencrypt"
 
 volumes:
   postgres_data:
 
 networks:
-  factory-network:
+  factory-net:
     driver: bridge
