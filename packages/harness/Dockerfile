@@ -29,16 +29,12 @@ RUN apk add --no-cache openssl python3 make g++
 # Copy harness package files ONLY
 COPY packages/harness/package*.json ./
 
-# Install production deps (includes @prisma/client)
-RUN npm install --production --legacy-peer-deps --no-fund --no-audit
-
-# Install TypeScript + Prisma devDeps (needed for build only)
-RUN npm install typescript@5.9.3 --save-dev --no-fund --no-audit \
-    && npm install prisma@5.22.0 --save-dev --no-fund --no-audit
-
 # Copy source and prisma schema
 COPY packages/harness/src ./src
 COPY packages/harness/prisma ./prisma
+
+# Install all deps (including devDeps for build)
+RUN npm install --legacy-peer-deps --no-fund --no-audit
 
 # Generate Prisma client (DATABASE_URL can be dummy)
 RUN DATABASE_URL=${DATABASE_URL:-postgresql://dummy} ./node_modules/.bin/prisma generate --schema=./prisma/schema.prisma
