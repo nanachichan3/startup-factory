@@ -37,9 +37,10 @@ COPY packages/harness/tsconfig.json ./harness/
 COPY packages/harness/prisma ./harness/prisma
 COPY packages/harness/src ./harness/src
 
-# Generate Prisma client (run from harness directory)
+# Generate Prisma client (use env file to avoid shell interpretation issues)
 WORKDIR /app/harness
-RUN DATABASE_URL="${DATABASE_URL}" npx prisma generate --schema=./prisma/schema.prisma
+RUN echo "DATABASE_URL=${DATABASE_URL}" > .env.temp && \
+    npx prisma generate --schema=./prisma/schema.prisma && rm .env.temp
 
 # Build TypeScript
 RUN ./node_modules/.bin/tsc --project ./tsconfig.json
