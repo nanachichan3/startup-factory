@@ -70,6 +70,7 @@ COPY --from=builder /app/dist ./dist
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
 USER nodejs
 
-EXPOSE 13000
+ENV PORT=8080
+EXPOSE 8080
 
 CMD ["node", "dist/index.js"]
