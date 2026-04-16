@@ -42,6 +42,8 @@ services:
       dockerfile: packages/harness/Dockerfile
     container_name: factory-api
     restart: unless-stopped
+    ports:
+      - "3002:3000"
     environment:
       - NODE_ENV=production
       - TEMPORAL_ADDRESS=temporal:7233
