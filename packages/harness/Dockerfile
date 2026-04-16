@@ -20,6 +20,7 @@ ARG DISCORD_BOT_TOKEN
 ARG FACTORY_API_URL
 ARG COOLIFY_FQDN
 ENV NODE_ENV=production
+ENV DATABASE_URL=postgresql://dummy:dummy@localhost/dummy
 
 WORKDIR /app
 
@@ -37,15 +38,8 @@ COPY packages/harness/tsconfig.json ./harness/
 COPY packages/harness/prisma ./harness/prisma
 COPY packages/harness/src ./harness/src
 
-# Copy source and config
-WORKDIR /app
-COPY packages/harness/tsconfig.json ./harness/
-COPY packages/harness/prisma ./harness/prisma
-COPY packages/harness/src ./harness/src
-
-# Generate Prisma client using hardcoded dummy URL for build
+# Generate Prisma client (DATABASE_URL is set via ENV above)
 WORKDIR /app/harness
-ENV DATABASE_URL="postgresql://dummy:dummy@localhost/dummy"
 RUN npx prisma generate --schema=./prisma/schema.prisma
 
 # Build TypeScript
@@ -56,7 +50,7 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-# Runtime environment variables
+# Runtime environment variables (empty, injected at container start)
 ENV NODE_ENV=production
 ENV TEMPORAL_ADDRESS=
 ENV TEMPORAL_NAMESPACE=default
