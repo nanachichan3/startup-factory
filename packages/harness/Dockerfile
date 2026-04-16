@@ -34,10 +34,11 @@ COPY packages/harness/tsconfig.json ./harness/
 COPY packages/harness/src ./harness/src
 
 # Install all deps (including devDeps for build)
-RUN cd harness && npm install --legacy-peer-deps --no-fund --no-audit
+WORKDIR /app/harness
+RUN npm install --legacy-peer-deps --no-fund --no-audit
 
 # Build TypeScript and generate Prisma client
-RUN cd harness && npx prisma generate --schema=./prisma/schema.prisma \
+RUN npm run prisma:generate \
     && ./node_modules/.bin/tsc --project ./tsconfig.json
 
 # Production image
