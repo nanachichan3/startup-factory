@@ -26,7 +26,7 @@ WORKDIR /app
 # Install OpenSSL + build tools (needed for Prisma)
 RUN apk add --no-cache openssl python3 make g++
 
-# Copy harness package files (context is project root, dockerfile is packages/harness/Dockerfile)
+# Copy harness package files (context is project root, dockerfile in packages/harness/)
 COPY package*.json ./
 COPY packages/harness/package*.json ./harness/
 COPY packages/harness/prisma ./harness/prisma
@@ -66,14 +66,13 @@ ARG COOLIFY_FQDN
 ENV NODE_ENV=production
 
 # Copy package files and install production deps only
-COPY harness/package*.json ./
+COPY packages/harness/package*.json ./
+COPY packages/harness/node_modules/.prisma ./node_modules/.prisma
+COPY packages/harness/node_modules/@prisma ./node_modules/@prisma
+
 RUN npm install --production --legacy-peer-deps --no-fund --no-audit
 
-# Copy generated Prisma client from builder
-COPY --from=builder /app/harness/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/harness/node_modules/@prisma ./node_modules/@prisma
-
-# Copy pre-compiled TypeScript output
+# Copy pre-compiled TypeScript output from builder
 COPY --from=builder /app/harness/dist ./dist
 
 # Create non-root user
