@@ -26,21 +26,20 @@ WORKDIR /app
 # Install OpenSSL + build tools (needed for Prisma)
 RUN apk add --no-cache openssl python3 make g++
 
-# Copy harness package files ONLY
-COPY packages/harness/package*.json ./
-
-# Copy source and prisma schema
-COPY packages/harness/src ./src
-COPY packages/harness/prisma ./prisma
+# Copy harness package files (context is ./packages/harness)
+COPY package*.json ./
+COPY prisma ./prisma
+COPY tsconfig.json ./
 
 # Install all deps (including devDeps for build)
 RUN npm install --legacy-peer-deps --no-fund --no-audit
 
-# Generate Prisma client (DATABASE_URL can be dummy)
-RUN DATABASE_URL=${DATABASE_URL:-postgresql://dummy} ./node_modules/.bin/prisma generate --schema=./prisma/schema.prisma
+# Copy source
+COPY src ./src
 
-# Build TypeScript
-RUN ./node_modules/.bin/tsc --project ./tsconfig.json
+# Build TypeScript and generate Prisma client
+RUN npx prisma generate --schema=./prisma/schema.prisma \
+    && ./node_modules/.bin/tsc --project ./tsconfig.json
 
 # Production image
 FROM node:22-alpine
@@ -68,7 +67,7 @@ ARG COOLIFY_FQDN
 ENV NODE_ENV=production
 
 # Copy package files and install production deps only
-COPY packages/harness/package*.json ./
+COPY package*.json ./
 RUN npm install --production --legacy-peer-deps --no-fund --no-audit
 
 # Copy generated Prisma client from builder
