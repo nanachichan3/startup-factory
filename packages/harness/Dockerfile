@@ -20,7 +20,7 @@ ARG DISCORD_BOT_TOKEN
 ARG FACTORY_API_URL
 ARG COOLIFY_FQDN
 
-ENV NODE_ENV=production
+ENV NODE_ENV=development
 ENV DATABASE_URL=postgresql://dummy:dummy@localhost/dummy
 
 WORKDIR /app
@@ -28,31 +28,23 @@ WORKDIR /app
 # Install build tools
 RUN apk add --no-cache openssl python3 make g++ git
 
-# Copy harness package files (context is project root, paths relative to it)
-COPY packages/harness/package*.json ./harness/
+# Copy and install all dependencies (including devDeps since NODE_ENV=development)
+COPY packages/harness/package*.json ./
 
-WORKDIR /app/harness
-
-# Install dependencies (including devDeps for build)
-RUN npm install --legacy-peer-deps --no-fund --no-audit 2>&1 || { echo "npm install failed"; exit 1; }
+# Install all dependencies
+WORKDIR /app
+RUN npm install --legacy-peer-deps --no-fund --no-audit
 
 # Copy source and config
-WORKDIR /app
-COPY packages/harness/tsconfig.json ./harness/
-COPY packages/harness/prisma ./harness/prisma
-COPY packages/harness/src ./harness/src
+COPY packages/harness/tsconfig.json ./
+COPY packages/harness/prisma ./prisma
+COPY packages/harness/src ./src
 
-# Generate Prisma client (DATABASE_URL is set via ENV above)
-WORKDIR /app/harness
-
-# Debug: verify prisma is installed
-RUN ls -la node_modules/.bin/ | grep prisma || { echo "prisma not found"; ls -la node_modules/ | head -20; exit 1; }
-
-# Run prisma generate with verbose output
-RUN npx prisma version && npx prisma generate --schema=./prisma/schema.prisma 2>&1
+# Generate Prisma client
+RUN npx prisma generate --schema=./prisma/schema.prisma
 
 # Build TypeScript
-RUN ./node_modules/.bin/tsc --project ./tsconfig.json
+RUN ./node_modules/.bin/tsc
 
 # Production image - copy compiled output
 FROM node:22-alpine
@@ -70,9 +62,9 @@ COPY packages/harness/package*.json ./
 RUN npm install --production --legacy-peer-deps --no-fund --no-audit
 
 # Copy generated Prisma client and compiled output from builder
-COPY --from=builder /app/harness/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/harness/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/harness/dist ./dist
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/dist ./dist
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
