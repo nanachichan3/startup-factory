@@ -40,7 +40,8 @@ services:
       context: ./packages/harness
       dockerfile: Dockerfile
     container_name: startup-factory-api
-    # No host port - expose via coolify network
+    expose:
+      - "3000"
     environment:
       - NODE_ENV=production
       - TEMPORAL_ADDRESS=temporal:7233
