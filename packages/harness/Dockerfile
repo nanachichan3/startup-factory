@@ -1,10 +1,8 @@
-# Production image - use pre-built dist and node_modules from harness package
-FROM node:22-alpine
+# Build stage - compile TypeScript and generate Prisma client
+FROM node:22-alpine AS builder
 
-WORKDIR /app
-
-# Declare build args for runtime
-ARG DATABASE_URL
+# Build args for package installation and prisma generate
+ARG DATABASE_URL=dummy://localhost
 ARG OPENROUTER_API_KEY
 ARG DASHBOARD_USER
 ARG DASHBOARD_PASS
@@ -23,9 +21,47 @@ ARG FACTORY_API_URL
 ARG COOLIFY_FQDN
 ENV NODE_ENV=production
 
-# Copy pre-built dist and node_modules from packages/harness
-COPY packages/harness/dist ./dist
-COPY packages/harness/node_modules ./node_modules
+WORKDIR /app
+
+# Install build tools
+RUN apk add --no-cache openssl python3 make g++ git
+
+# Copy harness package files
+COPY package*.json ./
+COPY packages/harness/package*.json ./harness/
+COPY packages/harness/tsconfig.json ./harness/
+COPY packages/harness/prisma ./harness/prisma
+COPY packages/harness/src ./harness/src
+
+# Install dependencies (including devDeps)
+WORKDIR /app/harness
+RUN npm install --legacy-peer-deps --no-fund --no-audit
+
+# Generate Prisma client (uses dummy DATABASE_URL since we only need type generation)
+RUN DATABASE_URL=${DATABASE_URL} npx prisma generate --schema=./prisma/schema.prisma
+
+# Build TypeScript
+RUN ./node_modules/.bin/tsc --project ./tsconfig.json
+
+# Production image - copy compiled output
+FROM node:22-alpine
+
+WORKDIR /app
+
+# Runtime environment variables (injected at container start)
+ENV NODE_ENV=production
+ENV TEMPORAL_ADDRESS=
+ENV TEMPORAL_NAMESPACE=default
+ENV DATABASE_URL=
+
+# Copy package files and install production deps only
+COPY packages/harness/package*.json ./
+RUN npm install --production --legacy-peer-deps --no-fund --no-audit
+
+# Copy generated Prisma client and compiled output from builder
+COPY --from=builder /app/harness/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/harness/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/harness/dist ./dist
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
