@@ -67,12 +67,11 @@ ENV NODE_ENV=production
 
 # Copy package files and install production deps only
 COPY packages/harness/package*.json ./
-COPY packages/harness/node_modules/.prisma ./node_modules/.prisma
-COPY packages/harness/node_modules/@prisma ./node_modules/@prisma
-
 RUN npm install --production --legacy-peer-deps --no-fund --no-audit
 
-# Copy pre-compiled TypeScript output from builder
+# Copy generated Prisma client and compiled TS from builder
+COPY --from=builder /app/harness/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/harness/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/harness/dist ./dist
 
 # Create non-root user
