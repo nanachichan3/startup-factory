@@ -27,12 +27,14 @@ WORKDIR /app
 # Install build tools
 RUN apk add --no-cache openssl python3 make g++ git
 
-# Copy only package files first (to benefit from Docker layer caching)
+# Copy harness package files (context is project root, paths relative to it)
 COPY packages/harness/package*.json ./harness/
 WORKDIR /app/harness
+
+# Install dependencies (including devDeps for build)
 RUN npm install --legacy-peer-deps --no-fund --no-audit
 
-# Now copy source and config
+# Copy source and config
 WORKDIR /app
 COPY packages/harness/tsconfig.json ./harness/
 COPY packages/harness/prisma ./harness/prisma
