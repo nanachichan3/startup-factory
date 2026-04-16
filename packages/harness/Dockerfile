@@ -26,18 +26,19 @@ WORKDIR /app
 # Install build tools
 RUN apk add --no-cache openssl python3 make g++ git
 
-# Copy harness package files
-COPY package*.json ./
+# Copy only package files first (to benefit from Docker layer caching)
 COPY packages/harness/package*.json ./harness/
+WORKDIR /app/harness
+RUN npm install --legacy-peer-deps --no-fund --no-audit
+
+# Now copy source and config
+WORKDIR /app
 COPY packages/harness/tsconfig.json ./harness/
 COPY packages/harness/prisma ./harness/prisma
 COPY packages/harness/src ./harness/src
 
-# Install dependencies (including devDeps)
+# Generate Prisma client
 WORKDIR /app/harness
-RUN npm install --legacy-peer-deps --no-fund --no-audit
-
-# Generate Prisma client (uses dummy DATABASE_URL since we only need type generation)
 RUN DATABASE_URL=${DATABASE_URL} npx prisma generate --schema=./prisma/schema.prisma
 
 # Build TypeScript
@@ -48,7 +49,7 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-# Runtime environment variables (injected at container start)
+# Runtime environment variables
 ENV NODE_ENV=production
 ENV TEMPORAL_ADDRESS=
 ENV TEMPORAL_NAMESPACE=default
