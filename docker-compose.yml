@@ -19,19 +19,6 @@ services:
     networks:
       - factory-network
 
-  # Temporal Web UI
-  temporal-web:
-    image: temporalio/web:1.22.0
-    container_name: startup-factory-temporal-web
-    ports:
-      - "8235:8080"
-    environment:
-      - TEMPORAL_ADDRESS=temporal:7233
-    depends_on:
-      - temporal
-    networks:
-      - factory-network
-
   # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
@@ -47,24 +34,13 @@ services:
     networks:
       - factory-network
 
-  # Redis Cache
-  redis:
-    image: redis:alpine
-    container_name: startup-factory-redis
-    ports:
-      - "6380:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - factory-network
-
   # Factory API Server
   factory-api:
     build:
       context: ./packages/harness
       dockerfile: Dockerfile
     container_name: startup-factory-api
-    # No host port mapping - exposed internally via coolify network
+    # No host port - expose via coolify network
     environment:
       - NODE_ENV=production
       - TEMPORAL_ADDRESS=temporal:7233
@@ -72,11 +48,9 @@ services:
       - POSTGRES_DB=startup_factory
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - REDIS_HOST=redis
     depends_on:
       - temporal
       - postgres
-      - redis
     networks:
       - factory-network
 
@@ -99,7 +73,6 @@ services:
 
 volumes:
   postgres_data:
-  redis_data:
 
 networks:
   factory-network:
