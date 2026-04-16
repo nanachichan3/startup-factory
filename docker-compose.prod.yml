@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  # Temporal + PostgreSQL (internal to Coolify network)
+  postgres:
+    image: postgres:16-alpine
+    container_name: factory-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: temporal
+      POSTGRES_USER: temporal
+      POSTGRES_PWD: temporal
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U temporal -d temporal"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    # NO host ports - internal only
+    networks:
+      - factory-net
+
+  temporal:
+    image: temporalio/auto-setup:1.25.0
+    container_name: factory-temporal
+    restart: unless-stopped
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=temporal
+      - POSTGRES_SEEDS=postgres
+      - POSTGRES_DB=temporal
+      - ENABLE_ES=true
+    # NO host ports - internal only
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - factory-net
+
+  # Factory API (the main application)
+  factory-api:
+    build:
+      context: .
+      dockerfile: packages/harness/Dockerfile
+    container_name: factory-api
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_NAMESPACE=default
+      - DATABASE_URL=postgres://temporal:temporal@postgres:5432/temporal
+      - DASHBOARD_USER=admin
+      - DASHBOARD_PASS=${DASHBOARD_PASS:-factory2026}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
+      - FACTORY_API_URL=${FACTORY_API_URL:-http://factory-api:3000}
+      - MEM0_BASE_URL=${MEM0_BASE_URL:-}
+    # NO host ports - internal only
+    depends_on:
+      postgres:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+    networks:
+      - factory-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.factory.rule=Host(`startup-factory.qed.quest`)"
+      - "traefik.http.services.factory.loadbalancer.server.port=3000"
+      - "traefik.http.routers.factory.tls=true"
+      - "traefik.http.routers.factory.tls.certresolver=letsencrypt"
+
+volumes:
+  postgres_data:
+
+networks:
+  factory-net:
+    driver: bridge
