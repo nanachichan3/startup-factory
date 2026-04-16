@@ -35,15 +35,13 @@ services:
     networks:
       - factory-net
 
-  # Factory API Server
+  # Factory API Server (NO ports - Coolify handles networking via labels)
   factory-api:
     build:
       context: .
       dockerfile: packages/harness/Dockerfile
     container_name: factory-api
     restart: unless-stopped
-    ports:
-      - "3002:3000"
     environment:
       - NODE_ENV=production
       - TEMPORAL_ADDRESS=temporal:7233
@@ -52,7 +50,6 @@ services:
       - DASHBOARD_USER=admin
       - DASHBOARD_PASS=${DASHBOARD_PASS:-factory2026}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
-      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
     networks:
       - factory-net
     labels:
@@ -67,4 +64,5 @@ volumes:
 
 networks:
   factory-net:
-    driver: bridge
+    name: ${COOLIFY_NETWORK_ID:-coolify}
+    external: true
