@@ -1,7 +1,7 @@
 # Build stage - compile TypeScript and generate Prisma client
 FROM node:22-alpine AS builder
 
-# Build args for package installation and prisma generate
+# Build args
 ARG DATABASE_URL=dummy://localhost
 ARG OPENROUTER_API_KEY
 ARG DASHBOARD_USER
@@ -19,6 +19,7 @@ ARG REDIS_HOST
 ARG DISCORD_BOT_TOKEN
 ARG FACTORY_API_URL
 ARG COOLIFY_FQDN
+
 ENV NODE_ENV=production
 ENV DATABASE_URL=postgresql://dummy:dummy@localhost/dummy
 
@@ -29,10 +30,11 @@ RUN apk add --no-cache openssl python3 make g++ git
 
 # Copy harness package files (context is project root, paths relative to it)
 COPY packages/harness/package*.json ./harness/
+
 WORKDIR /app/harness
 
 # Install dependencies (including devDeps for build)
-RUN npm install --legacy-peer-deps --no-fund --no-audit
+RUN npm install --legacy-peer-deps --no-fund --no-audit 2>&1 || { echo "npm install failed"; exit 1; }
 
 # Copy source and config
 WORKDIR /app
@@ -42,7 +44,12 @@ COPY packages/harness/src ./harness/src
 
 # Generate Prisma client (DATABASE_URL is set via ENV above)
 WORKDIR /app/harness
-RUN npx prisma generate --schema=./prisma/schema.prisma
+
+# Debug: verify prisma is installed
+RUN ls -la node_modules/.bin/ | grep prisma || { echo "prisma not found"; ls -la node_modules/ | head -20; exit 1; }
+
+# Run prisma generate with verbose output
+RUN npx prisma version && npx prisma generate --schema=./prisma/schema.prisma 2>&1
 
 # Build TypeScript
 RUN ./node_modules/.bin/tsc --project ./tsconfig.json
