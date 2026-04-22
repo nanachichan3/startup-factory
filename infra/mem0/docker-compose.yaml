@@ -12,7 +12,7 @@ services:
       - coolify
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.mem0.rule=Host(`osmqw04ftbdhud2cxp3e9s3p.qed.quest`)"
+      - "traefik.http.routers.mem0.rule=Host(`mem0.qed.quest`)"
       - "traefik.http.services.mem0.loadbalancer.server.port=5000"
       - "traefik.http.routers.mem0.tls=true"
       - "traefik.http.routers.mem0.tls.certresolver=letsencrypt"
