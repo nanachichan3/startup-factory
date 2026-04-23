@@ -5,19 +5,15 @@ services:
     image: ghcr.io/nanachichan3/mem0:v12
     container_name: factory-mem0
     restart: unless-stopped
+    ports:
+      - "5000:5000"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://openrouter.ai/api/v1}
+      - SERVICE_URL_NGINX=http://mem0.qed.quest
+      - SERVICE_FQDN_NGINX=mem0.qed.quest
     networks:
       - coolify
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.mem0.rule=Host(`mem0.qed.quest`) && PathPrefix(`/v1/mem0`)"
-      - "traefik.http.services.mem0.loadbalancer.server.port=5000"
-      - "traefik.http.routers.mem0.tls=true"
-      - "traefik.http.routers.mem0.tls.certresolver=letsencrypt"
-    healthcheck:
-      disable: true
 
 networks:
   coolify:
