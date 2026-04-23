@@ -11,8 +11,8 @@ services:
       - "3010:3000"
     environment:
       - NODE_ENV=production
-      - TEMPORAL_ADDRESS=${TEMPORAL_ADDRESS:-}
-      - TEMPORAL_NAMESPACE=${TEMPORAL_NAMESPACE:-}
+      - TEMPORAL_ADDRESS=${TEMPORAL_ADDRESS:-http://temporal.qed.quest:7233}
+      - TEMPORAL_NAMESPACE=${TEMPORAL_NAMESPACE:-default}
       - TEMPORAL_API_KEY=${TEMPORAL_API_KEY:-}
       - DATABASE_URL=${DATABASE_URL:-}
       - DB_HOST=${DB_HOST:-}
@@ -25,6 +25,7 @@ services:
       - DASHBOARD_PASS=${DASHBOARD_PASS:-password}
       - REDIS_HOST=${REDIS_HOST:-}
       - DEMO_MODE=${DEMO_MODE:-false}
+      - MEM0_BASE_URL=${MEM0_BASE_URL:-http://mem0.qed.quest}
     networks:
       - factory-network
     restart: unless-stopped
