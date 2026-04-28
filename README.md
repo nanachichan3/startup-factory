@@ -133,6 +133,7 @@ Open `http://localhost:8080` to view the Temporal Web UI.
 ## 🔗 Related Repositories
 
 - [startup-template](https://github.com/nanachichan3/startup-template) — Production template for new startups
+- [Quested / Self-Degree](https://github.com/Quested-io/platform) — AI-powered educational platform (portfolio company; GTM & docs live in `self-degree-repo/docs/`) — see [`docs/business_stages/idea/gtm-strategy.md`](./self-degree-repo/docs/business_stages/idea/gtm-strategy.md)
 
 ## License
 
