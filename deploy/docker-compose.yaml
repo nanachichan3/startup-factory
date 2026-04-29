@@ -1,24 +1,78 @@
 version: '3.8'
+
 services:
-  startup-factory:
-    image: ghcr.io/nanachichan3/startup-factory:latest
-    environment:
-      - PORT=3000
-      - NODE_ENV=production
-      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:placeholder@x0k4w8404wckwwcswg808gco:5432/projects}
-      - TEMPORAL_ADDRESS=${TEMPORAL_ADDRESS:-}
-      - TEMPORAL_NAMESPACE=${TEMPORAL_NAMESPACE:-}
-      - TEMPORAL_API_KEY=${TEMPORAL_API_KEY:-}
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+  paperclip-agent:
+    image: ghcr.io/nanachichan3/paperclip-deployment:latest
+    container_name: paperclip-agent
     restart: unless-stopped
+    ports:
+      - "3000:3000"   # Paperclip harness API
+      - "8080:8080"   # AIO Sandbox (browser/VNC)
+      - "5900:5900"   # AIO VNC
+      - "8888:8888"   # AIO Jupyter
+      - "8200:8200"   # AIO VSCode
+      - "9222:9222"   # AIO Chrome DevTools
+      - "18790:18790" # Hermes gateway (available)
+      - "9000:9000"   # Cursor CLI (available)
+      - "9001:9001"   # Codex CLI (available)
+      - "9002:9002"   # Claude Code (available)
+      - "9003:9003"   # Gemini CLI (available)
+      - "9004:9004"   # OpenCode (available)
+    volumes:
+      - paperclip-workspace:/workspace
+      # Docker socket for AIO Sandbox (spawns ghcr.io/agent-infra/sandbox container)
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      # Paperclip SaaS
+      - PAPERCLIP_API_KEY=${PAPERCLIP_API_KEY:-}
+      - PAPERCLIP_API_URL=${PAPERCLIP_API_URL:-https://paperclip.rachkovan.com}
+      - PAPERCLIP_AGENT_ID=${PAPERCLIP_AGENT_ID:-}
+      - PAPERCLIP_COMPANY_ID=${PAPERCLIP_COMPANY_ID:-209e81cd-41f2-4a0f-b420-951645b5cf64}
+      # Database
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:${POSTGRES_PASSWORD}@x0k4w8404wckwwcswg808gco:5432/projects}
+      - BOT_COORDINATION_DB_HOST=x0k4w8404wckwwcswg808gco
+      - BOT_COORDINATION_DB_PORT=${BOT_COORDINATION_DB_PORT:-5432}
+      - BOT_COORDINATION_DB_USER=${BOT_COORDINATION_DB_USER:-postgres}
+      - BOT_COORDINATION_DB_PASS=${BOT_COORDINATION_DB_PASS}
+      - BOT_COORDINATION_DB_NAME=${BOT_COORDINATION_DB_NAME:-projects}
+      # Hermes / OpenClaw
+      - HERMES_MODEL=${HERMES_MODEL:-minimax/minimax-m2.7}
+      - HERMES_INFERENCE_PROVIDER=${HERMES_INFERENCE_PROVIDER:-openrouter}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
+      - DISCORD_ALLOWED_USERS=588858125126336544
+      - DISCORD_FREE_RESPONSE_CHANNELS=1484900474363842643,1489982401445888000,1489982424594251920
+      # Mem0
+      - MEM0_URL=${MEM0_URL:-http://mem0:5000}
+      - MEM0_API_KEY=${MEM0_API_KEY:-mem0-self-hosted}
+      # Temporal
+      - TEMPORAL_ADDRESS=${TEMPORAL_ADDRESS:-temporal:7233}
+      - TEMPORAL_NAMESPACE=${TEMPORAL_NAMESPACE:-default}
+      # JWT
+      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+      # Sandbox
+      - TZ=${TZ:-Asia/Singapore}
+      - WORKSPACE=/workspace
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.startup-factory.rule=Host(`startup-factory.qed.quest`)"
-      - "traefik.http.services.startup-factory.loadbalancer.server.port=3000"
-      - "traefik.http.routers.startup-factory.tls=true"
-      - "traefik.http.routers.startup-factory.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.paperclip-agent.rule=Host(`startup-factory.qed.quest`)"
+      - "traefik.http.services.paperclip-agent.loadbalancer.server.port=3000"
+      - "traefik.http.routers.paperclip-agent.tls=true"
+      - "traefik.http.routers.paperclip-agent.tls.certresolver=letsencrypt"
+      # AIO Sandbox routes
+      - "traefik.http.routers.sandbox.rule=Host(`startup-factory.qed.quest`) && PathPrefix(`/vnc`)"
+      - "traefik.http.services.sandbox.loadbalancer.server.port=8080"
+      - "traefik.http.routers.sandbox.tls=true"
+    shm_size: 2gb
+    mem_limit: 8g
+    cpus: 4
     networks:
       - coolify
+
+volumes:
+  paperclip-workspace:
 
 networks:
   coolify:
