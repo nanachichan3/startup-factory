@@ -14,6 +14,14 @@ services:
       - SERVICE_FQDN_NGINX=mem0.qed.quest
     networks:
       - coolify
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mem0-rachkovan.rule=Host(`mem0.rachkovan.com`)"
+      - "traefik.http.routers.mem0-rachkovan.entrypoints=http"
+      - "traefik.http.routers.mem0-rachkovan.service=mem0-rachkovan"
+      - "traefik.http.services.mem0-rachkovan.loadbalancer.server.port=5000"
+      - "traefik.http.routers.mem0-rachkovan.middlewares=gzip"
+      - "traefik.http.middlewares.gzip.compress=true"
 
 networks:
   coolify:
