@@ -52,31 +52,8 @@ services:
       - "traefik.http.routers.mem0-api.entrypoints=http"
       - "traefik.http.routers.mem0-api.service=mem0-api"
       - "traefik.http.services.mem0-api.loadbalancer.server.port=8888"
-
-  mem0-dashboard:
-    build:
-      context: .
-      dockerfile: infra/mem0/Dockerfile.mem0-dashboard
-    container_name: factory-mem0-dashboard
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    environment:
-      - NEXT_PUBLIC_API_URL=http://mem0:8888
-      - API_INTERNAL_URL=http://mem0:8000
-      - NEXT_PUBLIC_INSTANCE_NAME=Nanachi Mem0
-    depends_on:
-      mem0:
-        condition: service_started
-    restart: unless-stopped
-    networks:
-      - coolify
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.mem0-dash.rule=Host(`mem0.rachkovan.com`) || Host(`mem0.qed.quest`)"
-      - "traefik.http.routers.mem0-dash.entrypoints=http"
-      - "traefik.http.routers.mem0-dash.service=mem0-dash"
-      - "traefik.http.services.mem0-dash.loadbalancer.server.port=3000"
+      - "traefik.http.routers.mem0-api.middlewares=gzip"
+      - "traefik.http.middlewares.gzip.compress=true"
 
 volumes:
   mem0-pg-data:
