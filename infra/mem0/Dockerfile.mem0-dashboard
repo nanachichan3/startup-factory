@@ -29,9 +29,9 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=base /app /app
 
 ENV NEXT_TELEMETRY_DISABLED=1
-# These are placeholders that get replaced at runtime by entrypoint.sh
-ENV NEXT_PUBLIC_API_URL=NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_INSTANCE_NAME=NEXT_PUBLIC_INSTANCE_NAME
+# Pre-configured for Mem0 stack internal networking
+ENV NEXT_PUBLIC_API_URL=http://mem0:5000
+ENV NEXT_PUBLIC_INSTANCE_NAME=Nanachi Mem0
 
 RUN npm run build
 
@@ -49,15 +49,11 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copy entrypoint.sh from build context
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
 USER nextjs
 
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-ENTRYPOINT ["/entrypoint.sh"]
-CMD [".next/standalone/server.js"]
+WORKDIR /app
+ENTRYPOINT ["node", ".next/standalone/server.js"]
