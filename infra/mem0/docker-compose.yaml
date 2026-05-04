@@ -26,7 +26,7 @@ services:
   mem0-dashboard:
     build:
       context: .
-      dockerfile: infra/mem0/Dockerfile.mem0-dashboard
+      dockerfile: Dockerfile.mem0-dashboard
     container_name: factory-mem0-dashboard
     restart: unless-stopped
     environment:
