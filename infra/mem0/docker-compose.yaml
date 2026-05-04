@@ -2,47 +2,60 @@ version: '3.8'
 
 services:
   mem0:
-    image: ghcr.io/nanachichan3/mem0:v12
-    container_name: factory-mem0
+    image: ghcr.io/mem0ai/self-hosted:latest
+    container_name: factory-mem0-full
     restart: unless-stopped
     ports:
-      - "5000:5000"
+      - "8000:8000"
+      - "3000:3000"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://openrouter.ai/api/v1}
-      - SERVICE_URL_NGINX=http://mem0.qed.quest
-      - SERVICE_FQDN_NGINX=mem0.qed.quest
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/mem0db
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=mem0db
+    depends_on:
+      - postgres
     networks:
       - coolify
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.mem0-rachkovan.rule=Host(`mem0.rachkovan.com`)"
-      - "traefik.http.routers.mem0-rachkovan.entrypoints=http"
-      - "traefik.http.routers.mem0-rachkovan.service=mem0-rachkovan"
-      - "traefik.http.services.mem0-rachkovan.loadbalancer.server.port=5000"
-      - "traefik.http.routers.mem0-rachkovan.middlewares=gzip"
+      - "traefik.http.routers.mem0-full.rule=Host(`mem0.rachkovan.com`)"
+      - "traefik.http.routers.mem0-full.entrypoints=http"
+      - "traefik.http.routers.mem0-full.service=mem0-full"
+      - "traefik.http.services.mem0-full.loadbalancer.server.port=8000"
       - "traefik.http.middlewares.gzip.compress=true"
 
   mem0-dashboard:
-    build:
-      context: .
-      dockerfile: Dockerfile.mem0-dashboard
+    image: ghcr.io/mem0ai/self-hosted:latest
     container_name: factory-mem0-dashboard
     restart: unless-stopped
+    profiles:
+      - disabled
     environment:
-      - NEXT_PUBLIC_API_URL=http://mem0.rachkovan.com:5000
-      - NEXT_PUBLIC_INSTANCE_NAME=Mem0
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
     networks:
       - coolify
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.mem0-dashboard.rule=Host(`mem0.rachkovan.com`) && PathPrefix(`/dashboard`)"
-      - "traefik.http.routers.mem0-dashboard.entrypoints=http"
-      - "traefik.http.routers.mem0-dashboard.service=mem0-dashboard"
-      - "traefik.http.services.mem0-dashboard.loadbalancer.server.port=3000"
-      - "traefik.http.routers.mem0-dashboard.middlewares=gzip"
+
+  postgres:
+    image: ankane/pgvector:latest
+    container_name: factory-mem0-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-mem0secret123}
+      - POSTGRES_DB=mem0db
+    volumes:
+      - mem0-postgres-data:/var/lib/postgresql/data
+    networks:
+      - coolify
 
 networks:
   coolify:
     name: coolify
     external: true
+
+volumes:
+  mem0-postgres-data:
