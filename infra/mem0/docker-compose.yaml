@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   mem0-postgres:
-    image: ankane/pgvector:v0.5.1
+    image: pgvector/pgvector:0.5.1
     container_name: factory-mem0-postgres
     restart: unless-stopped
     environment:
