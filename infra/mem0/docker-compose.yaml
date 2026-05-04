@@ -24,11 +24,11 @@ services:
       - "traefik.http.middlewares.gzip.compress=true"
 
   mem0-dashboard:
-    build:
-      context: .
-      dockerfile: infra/mem0/Dockerfile.nginx
+    image: nginx:alpine
     container_name: factory-mem0-dashboard
     restart: unless-stopped
+    volumes:
+      - ./public:/usr/share/nginx/html:ro
     networks:
       - coolify
     labels:
