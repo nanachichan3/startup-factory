@@ -28,7 +28,7 @@ services:
     container_name: factory-mem0-dashboard
     restart: unless-stopped
     volumes:
-      - ./public:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     networks:
       - coolify
     labels:
