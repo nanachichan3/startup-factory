@@ -23,6 +23,27 @@ services:
       - "traefik.http.routers.mem0-rachkovan.middlewares=gzip"
       - "traefik.http.middlewares.gzip.compress=true"
 
+  mem0-dashboard:
+    build:
+      context: ../../../
+      dockerfile: infra/mem0/Dockerfile.mem0-dashboard
+    container_name: factory-mem0-dashboard
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://mem0.rachkovan.com:5000
+      - NEXT_PUBLIC_INSTANCE_NAME=Mem0
+    networks:
+      - coolify
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mem0-dashboard.rule=Host(`mem0-dashboard.rachkovan.com`)"
+      - "traefik.http.routers.mem0-dashboard.entrypoints=http"
+      - "traefik.http.routers.mem0-dashboard.service=mem0-dashboard"
+      - "traefik.http.services.mem0-dashboard.loadbalancer.server.port=3000"
+      - "traefik.http.routers.mem0-dashboard.middlewares=gzip"
+
 networks:
   coolify:
     name: coolify
