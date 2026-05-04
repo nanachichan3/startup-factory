@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   mem0-postgres:
-    image: pgvector/pgvector:pg16
+    image: ankane/pgvector:v0.5.1
     container_name: factory-mem0-postgres
     restart: unless-stopped
     environment:
@@ -11,36 +11,36 @@ services:
       POSTGRES_DB: mem0
     volumes:
       - mem0-pg-data:/var/lib/postgresql/data
-    networks:
-      - coolify
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d mem0"]
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - coolify
 
   mem0:
-    image: mem0/mem0-api-server:latest
+    image: ghcr.io/nanachichan3/mem0:v12
     container_name: factory-mem0
     restart: unless-stopped
     ports:
-      - "8888:8000"
+      - "8888:5000"
     environment:
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://openrouter.ai/api/v1}
-      POSTGRES_HOST: mem0-postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_DB: mem0
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${MEM0_POSTGRES_PASSWORD:-mem0-local-pg}
-      POSTGRES_COLLECTION_NAME: mem0
-      APP_DB_NAME: mem0_app
-      JWT_SECRET: ${MEM0_JWT_SECRET:-change-me-mem0-jwt}
-      ADMIN_API_KEY: ${MEM0_API_KEY:-mem0-local-api-key}
-      AUTH_DISABLED: false
-      DASHBOARD_URL: ${MEM0_DASHBOARD_URL:-http://mem0-dashboard:3000}
-      SERVICE_URL_NGINX: http://mem0.qed.quest
-      SERVICE_FQDN_NGINX: mem0.qed.quest
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://openrouter.ai/api/v1}
+      - POSTGRES_HOST=mem0-postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=mem0
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${MEM0_POSTGRES_PASSWORD:-mem0-local-pg}
+      - POSTGRES_COLLECTION_NAME=mem0
+      - APP_DB_NAME=mem0_app
+      - JWT_SECRET=${MEM0_JWT_SECRET:-change-me-mem0-jwt}
+      - ADMIN_API_KEY=${MEM0_API_KEY:-mem0-local-api-key}
+      - AUTH_DISABLED=false
+      - DASHBOARD_URL=http://mem0-dashboard:3000
+      - SERVICE_URL_NGINX=http://mem0.qed.quest
+      - SERVICE_FQDN_NGINX=mem0.qed.quest
     depends_on:
       mem0-postgres:
         condition: service_healthy
@@ -51,7 +51,7 @@ services:
       - "traefik.http.routers.mem0-api.rule=Host(`mem0.qed.quest`)"
       - "traefik.http.routers.mem0-api.entrypoints=http"
       - "traefik.http.routers.mem0-api.service=mem0-api"
-      - "traefik.http.services.mem0-api.loadbalancer.server.port=8000"
+      - "traefik.http.services.mem0-api.loadbalancer.server.port=5000"
 
   mem0-dashboard:
     build:
@@ -59,11 +59,9 @@ services:
       dockerfile: Dockerfile.mem0-dashboard
     container_name: factory-mem0-dashboard
     restart: unless-stopped
-    ports:
-      - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://mem0:8000
-      - API_INTERNAL_URL=http://mem0:8000
+      - NEXT_PUBLIC_API_URL=http://mem0:5000
+      - API_INTERNAL_URL=http://mem0:5000
       - NEXT_PUBLIC_INSTANCE_NAME=Nanachi Mem0
     depends_on:
       - mem0
@@ -76,10 +74,10 @@ services:
       - "traefik.http.routers.mem0-dashboard.service=mem0-dashboard"
       - "traefik.http.services.mem0-dashboard.loadbalancer.server.port=3000"
 
+volumes:
+  mem0-pg-data:
+
 networks:
   coolify:
     name: coolify
     external: true
-
-volumes:
-  mem0-pg-data:
