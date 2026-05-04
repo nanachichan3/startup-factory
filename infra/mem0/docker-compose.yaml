@@ -22,6 +22,9 @@ services:
       - "traefik.http.services.mem0-rachkovan.loadbalancer.server.port=5000"
       - "traefik.http.routers.mem0-rachkovan.middlewares=gzip"
       - "traefik.http.middlewares.gzip.compress=true"
+      - "traefik.http.routers.mem0-api.rule=Host(`mem0.rachkovan.com`) && (PathPrefix(`/api`) || PathPrefix(`/v1`) || PathPrefix(`/health`) || PathPrefix(`/docs`))"
+      - "traefik.http.routers.mem0-api.service=mem0-api"
+      - "traefik.http.services.mem0-api.loadbalancer.server.port=5000"
 
 networks:
   coolify:
