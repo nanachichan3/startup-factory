@@ -54,5 +54,7 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
+# For Next.js standalone mode, run server.js from .next/standalone
+WORKDIR /app
 ENTRYPOINT ["node"]
-CMD ["server.js"]
+CMD [".next/standalone/server.js"]
