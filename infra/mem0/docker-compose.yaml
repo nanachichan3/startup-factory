@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   mem0-postgres:
-    image: ankane/pgvector:v0.5.1
+    image: pgvector/pgvector:0.5.1
     container_name: factory-mem0-postgres
     restart: unless-stopped
     environment:
@@ -20,7 +20,7 @@ services:
       - coolify
 
   mem0:
-    image: mem0/mem0-api-server:latest
+    image: ghcr.io/nanachichan3/mem0:v12
     container_name: factory-mem0
     restart: unless-stopped
     environment:
@@ -46,7 +46,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.mem0-api.rule=Host(`mem0.rachkovan.com`) && (PathPrefix(`/api`) || PathPrefix(`/v1`) || PathPrefix(`/health`) || PathPrefix(`/docs`))"
       - "traefik.http.routers.mem0-api.service=mem0-api"
-      - "traefik.http.services.mem0-api.loadbalancer.server.port=8000"
+      - "traefik.http.services.mem0-api.loadbalancer.server.port=5000"
 
   mem0-dashboard:
     build:
@@ -56,7 +56,7 @@ services:
     restart: unless-stopped
     environment:
       - NEXT_PUBLIC_API_URL=https://mem0.rachkovan.com
-      - API_INTERNAL_URL=http://mem0:8000
+      - API_INTERNAL_URL=http://mem0:5000
       - NEXT_PUBLIC_INSTANCE_NAME=Nanachi Mem0
     depends_on:
       mem0:
