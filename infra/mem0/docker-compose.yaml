@@ -24,7 +24,9 @@ services:
       - "traefik.http.middlewares.gzip.compress=true"
 
   mem0-dashboard:
-    image: ghcr.io/nanachichan3/mem0-dashboard:latest
+    build:
+      context: .
+      dockerfile: infra/mem0/Dockerfile.mem0-dashboard
     container_name: factory-mem0-dashboard
     restart: unless-stopped
     environment:
