@@ -55,8 +55,8 @@ services:
 
   mem0-dashboard:
     build:
-      context: /data/workspace/openclaw-deploy
-      dockerfile: Dockerfile.mem0-dashboard
+      context: ..
+      dockerfile: infra/mem0/Dockerfile.mem0-dashboard
     container_name: factory-mem0-dashboard
     restart: unless-stopped
     ports:
