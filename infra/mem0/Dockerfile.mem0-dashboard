@@ -1,6 +1,4 @@
 # Mem0 Dashboard — builds from the mem0 repo source
-# https://github.com/mem0ai/mem0/tree/main/server/dashboard
-
 FROM node:20-alpine AS base
 RUN apk add --no-cache libc6-compat git
 WORKDIR /app
@@ -22,15 +20,17 @@ RUN \
   else cd /app && npm install; \
   fi
 
-# Build
-FROM node:20-alpine AS builder
+# Build - use build args for NEXT_PUBLIC values
+FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=base /app /app
 
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV NEXT_PUBLIC_API_URL=NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_INSTANCE_NAME=NEXT_PUBLIC_INSTANCE_NAME
+ARG NEXT_PUBLIC_API_URL=http://localhost:5000
+ARG NEXT_PUBLIC_INSTANCE_NAME=Mem0
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NEXT_PUBLIC_INSTANCE_NAME=${NEXT_PUBLIC_INSTANCE_NAME}
 
 RUN npm run build
 
@@ -48,16 +48,11 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-RUN echo '#!/bin/sh\n\
-sed -i "s|NEXT_PUBLIC_API_URL|${NEXT_PUBLIC_API_URL:-http://localhost:8888}|g" /app/server.js /app/.next/server/**/*.js 2>/dev/null || true\n\
-sed -i "s|NEXT_PUBLIC_INSTANCE_NAME|${NEXT_PUBLIC_INSTANCE_NAME:-Mem0}|g" /app/server.js /app/.next/server/**/*.js 2>/dev/null || true\n\
-exec node server.js\n' > /home/nextjs/entrypoint.sh && chmod +x /home/nextjs/entrypoint.sh
-
 USER nextjs
 
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-ENTRYPOINT ["/home/nextjs/entrypoint.sh"]
-CMD ["node", "server.js"]
+ENTRYPOINT ["node"]
+CMD ["server.js"]

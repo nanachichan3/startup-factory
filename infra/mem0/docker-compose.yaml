@@ -29,8 +29,6 @@ services:
       dockerfile: Dockerfile.mem0-dashboard
     container_name: factory-mem0-dashboard
     restart: unless-stopped
-    ports:
-      - "3000:3000"
     environment:
       - NEXT_PUBLIC_API_URL=http://mem0.rachkovan.com:5000
       - NEXT_PUBLIC_INSTANCE_NAME=Mem0
