@@ -1,4 +1,6 @@
 # Mem0 Dashboard — builds from the mem0 repo source
+# Uses official mem0ai/mem0 dashboard as base
+
 FROM node:20-alpine AS base
 RUN apk add --no-cache libc6-compat git
 WORKDIR /app
@@ -20,17 +22,16 @@ RUN \
   else cd /app && npm install; \
   fi
 
-# Build - use build args for NEXT_PUBLIC values
+# Build - pass placeholders that will be replaced at runtime
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=base /app /app
 
 ENV NEXT_TELEMETRY_DISABLED=1
-ARG NEXT_PUBLIC_API_URL=http://localhost:5000
-ARG NEXT_PUBLIC_INSTANCE_NAME=Mem0
-ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
-ENV NEXT_PUBLIC_INSTANCE_NAME=${NEXT_PUBLIC_INSTANCE_NAME}
+# These are placeholders that get replaced at runtime by entrypoint.sh
+ENV NEXT_PUBLIC_API_URL=NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_INSTANCE_NAME=NEXT_PUBLIC_INSTANCE_NAME
 
 RUN npm run build
 
@@ -48,13 +49,15 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Use the official entrypoint.sh for runtime placeholder replacement
+COPY --from=builder /tmp/mem0/server/dashboard/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 USER nextjs
 
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# For Next.js standalone mode, run server.js from .next/standalone
-WORKDIR /app
-ENTRYPOINT ["node"]
-CMD [".next/standalone/server.js"]
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["node", "server.js"]
