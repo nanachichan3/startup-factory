@@ -23,22 +23,6 @@ services:
       - "traefik.http.routers.mem0-rachkovan.middlewares=gzip"
       - "traefik.http.middlewares.gzip.compress=true"
 
-  mem0-dashboard:
-    image: nginx:alpine
-    container_name: factory-mem0-dashboard
-    restart: unless-stopped
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-    networks:
-      - coolify
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.mem0-dashboard.rule=Host(`mem0-dashboard.rachkovan.com`)"
-      - "traefik.http.routers.mem0-dashboard.entrypoints=http"
-      - "traefik.http.routers.mem0-dashboard.service=mem0-dashboard"
-      - "traefik.http.services.mem0-dashboard.loadbalancer.server.port=80"
-      - "traefik.http.routers.mem0-dashboard.middlewares=gzip"
-
 networks:
   coolify:
     name: coolify
